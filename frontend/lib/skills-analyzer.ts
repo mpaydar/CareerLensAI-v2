@@ -4,7 +4,7 @@ import type { GapAnalysis } from "@/lib/gap-analysis-types";
 import { normalizeGapAnalysis } from "@/lib/gap-analysis-normalize";
 import { runGeminiGapAnalysis } from "@/lib/gap-analysis-gemini";
 import type { GapAnalysisEngine } from "@/lib/gap-types";
-import { focusJobDescription } from "@/lib/job-description";
+import { jobDescriptionForAnalysis } from "@/lib/job-description";
 import { getLlmLayerUrl, llmLayerGapAnalyze } from "@/lib/llm-layer-client";
 import {
   canSpawnLocalPython,
@@ -143,7 +143,7 @@ export async function runGapAnalysis(
   jobDescription: string,
   userId?: string,
 ): Promise<GapAnalysisRunResult> {
-  const focusedJd = focusJobDescription(jobDescription);
+  const focusedJd = jobDescriptionForAnalysis(jobDescription);
   const llmUrl = getLlmLayerUrl();
 
   // Production: Railway SpaCy via HTTP (never spawn python on Vercel).

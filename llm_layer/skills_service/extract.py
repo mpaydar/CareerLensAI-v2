@@ -109,7 +109,7 @@ def _match_skills_in_fragment(fragment: str, found: dict[str, None]) -> None:
     for phrase in _SKILL_PHRASES:
         if phrase in lowered:
             found[_display_label(phrase)] = None
-    tokens = re.split(r"[,/&]| and ", lowered)
+    tokens = re.split(r"[,/&+]| and ", lowered)
     for token in tokens:
         token = token.strip()
         if token in _SKILL_SET:
@@ -208,6 +208,12 @@ def focus_job_description(text: str) -> str:
         "job description",
         "about this role",
         "the role",
+        "you'd be helping",
+        "you would be helping",
+        "the kind of background",
+        "bonus points",
+        "qualifications",
+        "requirements",
     ):
         idx = lower.find(marker)
         if idx >= 0 and (start < 0 or idx < start):

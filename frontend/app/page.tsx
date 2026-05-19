@@ -184,14 +184,15 @@ function HomeApp() {
     };
   }, []);
 
-  const runGapAnalysis = useCallback(async () => {
+  const runGapAnalysis = useCallback(async (jobDescriptionOverride?: string) => {
     setGapError(null);
     setGapAnalyzing(true);
+    const jobDescription = (jobDescriptionOverride ?? highlight.text).trim();
     try {
       const response = await fetch("/api/gap", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jobDescription: highlight.text }),
+        body: JSON.stringify({ jobDescription }),
       });
       const data = (await response.json()) as {
         analysis?: StoredGapAnalysis;
@@ -477,7 +478,8 @@ function HomeApp() {
           analyzing={gapAnalyzing}
           error={gapError}
           ready={gapReady}
-          onAnalyze={() => void runGapAnalysis()}
+          highlightText={highlight.text}
+          onAnalyze={(jd) => void runGapAnalysis(jd)}
         />
 
         <InterviewPrepCoach gapSkills={gapAnalysis?.missing ?? []} />

@@ -75,8 +75,12 @@ apache spark
 hadoop
 kafka
 airflow
+dagster
+prefect
 dbt
+spark
 snowflake
+bigquery
 databricks
 tableau
 power bi

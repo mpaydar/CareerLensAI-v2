@@ -6,7 +6,7 @@ import {
   getStoredGapAnalysis,
   saveGapAnalysis,
 } from "@/lib/gap-store";
-import { focusJobDescription } from "@/lib/job-description";
+import { jobDescriptionForAnalysis } from "@/lib/job-description";
 import { runGapAnalysis } from "@/lib/skills-analyzer";
 import {
   ensureResumeFilePath,
@@ -50,11 +50,11 @@ export async function POST(request: Request) {
       );
     }
 
-    let jobDescription = focusJobDescription(highlight.text.trim());
+    let jobDescription = jobDescriptionForAnalysis(highlight.text.trim());
     try {
       const body = (await request.json()) as { jobDescription?: string };
       if (body.jobDescription?.trim()) {
-        jobDescription = focusJobDescription(body.jobDescription.trim());
+        jobDescription = jobDescriptionForAnalysis(body.jobDescription.trim());
       }
     } catch {
       // use stored highlight when body is empty

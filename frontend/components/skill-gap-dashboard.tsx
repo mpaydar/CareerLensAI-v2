@@ -9,14 +9,15 @@ import {
 } from "@/lib/skill-clusters";
 import type { OptimizeMode } from "@/lib/resume-optimizer";
 import type { ContextMismatchDetail } from "@/lib/gap-analysis-types";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type SkillGapDashboardProps = {
   analysis: StoredGapAnalysis | null;
   analyzing: boolean;
   error: string | null;
   ready: boolean;
-  onAnalyze: () => void;
+  highlightText: string;
+  onAnalyze: (jobDescription: string) => void;
 };
 
 type ChipVariant = "aligned" | "mismatch" | "missing" | "extra";
@@ -332,13 +333,60 @@ function buildMismatchTooltips(
   return map;
 }
 
+function JobDescriptionEditor({
+  value,
+  onChange,
+  onAnalyze,
+  analyzing,
+  ready,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  onAnalyze: () => void;
+  analyzing: boolean;
+  ready: boolean;
+}) {
+  return (
+    <div className="mt-4 space-y-2">
+      <label className="block text-xs font-medium text-zinc-400">
+        Job description for analysis
+      </label>
+      <textarea
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        rows={8}
+        placeholder="Paste or edit the job description (requirements, tech stack). Extension highlights sync here automatically."
+        className="w-full resize-y rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-indigo-500 focus:outline-none"
+      />
+      <button
+        type="button"
+        onClick={onAnalyze}
+        disabled={!ready || analyzing || value.trim().length < 20}
+        className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        {analyzing ? "Analyzing…" : "Analyze skills gap"}
+      </button>
+    </div>
+  );
+}
+
 export function SkillGapDashboard({
   analysis,
   analyzing,
   error,
   ready,
+  highlightText,
   onAnalyze,
 }: SkillGapDashboardProps) {
+  const [jdDraft, setJdDraft] = useState(highlightText);
+
+  useEffect(() => {
+    if (highlightText.trim()) {
+      setJdDraft(highlightText);
+    }
+  }, [highlightText]);
+
+  const runAnalyze = () => onAnalyze(jdDraft.trim());
   const [optimizing, setOptimizing] = useState<{
     skill: string;
     mode: OptimizeMode;
@@ -375,17 +423,16 @@ export function SkillGapDashboard({
         </h2>
         <p className="mt-2 max-w-xl text-sm text-zinc-500">
           {ready
-            ? "Resume and job description are ready. SpaCy compares skills and the context they appear in."
-            : "Upload your resume, then highlight a job description."}
+            ? "Paste or sync the job description below. SpaCy needs the requirements / tech stack section—not only company overview."
+            : "Upload your resume, then highlight or paste a job description."}
         </p>
-        <button
-          type="button"
-          onClick={onAnalyze}
-          disabled={!ready || analyzing}
-          className="mt-4 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          Analyze skills gap
-        </button>
+        <JobDescriptionEditor
+          value={jdDraft}
+          onChange={setJdDraft}
+          onAnalyze={runAnalyze}
+          analyzing={analyzing}
+          ready={ready}
+        />
         {error ? <p className="mt-3 text-xs text-red-400">{error}</p> : null}
       </section>
     );
@@ -418,8 +465,8 @@ export function SkillGapDashboard({
           </div>
           <button
             type="button"
-            onClick={onAnalyze}
-            disabled={!ready || analyzing}
+            onClick={runAnalyze}
+            disabled={!ready || analyzing || jdDraft.trim().length < 20}
             className="rounded-lg border border-zinc-600 px-3 py-1.5 text-xs text-zinc-300 hover:bg-zinc-800 disabled:opacity-40"
           >
             {analyzing ? "Analyzing…" : "Re-analyze"}
@@ -430,17 +477,25 @@ export function SkillGapDashboard({
           <div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
             {showOverviewWarning ? (
               <>
-                Highlight the <strong>Job Description</strong> section, not
-                only &ldquo;About the job&rdquo;, then re-analyze.
+                Your highlight looks like company overview only. Paste the full
+                requirements below (Python, SQL, Airflow, etc.), then
+                re-analyze.
               </>
             ) : (
               <>
-                No skills found in your highlight. Select text with technologies
-                and requirements.
+                No skills found in the job description text. Paste the
+                requirements / tech stack below, then re-analyze.
               </>
             )}
           </div>
         ) : null}
+        <JobDescriptionEditor
+          value={jdDraft}
+          onChange={setJdDraft}
+          onAnalyze={runAnalyze}
+          analyzing={analyzing}
+          ready={ready}
+        />
       </div>
 
       <div className="flex flex-col items-center gap-4 border-b border-zinc-800/80 px-6 py-6">
