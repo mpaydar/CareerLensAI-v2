@@ -207,7 +207,7 @@ function HomeApp() {
       }
     } catch {
       setGapError(
-        "Could not run analysis. Ensure the LLM layer is running (LLM_LAYER_URL in frontend/.env.local) or run: npm run llm:setup",
+        "Could not run analysis. Set LLM_LAYER_URL=http://localhost:8000 in frontend/.env.local, start the LLM layer (uvicorn in llm_layer/), and restart npm run dev.",
       );
     } finally {
       setGapAnalyzing(false);

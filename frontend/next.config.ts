@@ -43,6 +43,10 @@ const nextConfig: NextConfig = {
     root: projectRoot,
   },
   serverExternalPackages: ["pdf-parse", "mammoth", "@napi-rs/canvas"],
+  /** Ensure LLM_LAYER_URL from .env.local is visible to API routes in monorepo dev. */
+  env: {
+    LLM_LAYER_URL: process.env.LLM_LAYER_URL ?? "",
+  },
 };
 
 export default nextConfig;
