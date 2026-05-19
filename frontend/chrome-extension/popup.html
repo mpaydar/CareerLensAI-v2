@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body {
+      width: 320px;
+      padding: 16px;
+      font-family: sans-serif;
+      background: #1a1a2e;
+      color: #fff;
+      margin: 0;
+    }
+    h3 {
+      margin: 0 0 8px;
+      font-size: 15px;
+      color: #a5b4fc;
+    }
+    p {
+      font-size: 12px;
+      color: #aaa;
+      margin: 0 0 14px;
+      line-height: 1.5;
+    }
+    #status {
+      margin-bottom: 8px;
+      color: #a5b4fc;
+      font-size: 12px;
+    }
+    #selectedText {
+      min-height: 110px;
+      max-height: 180px;
+      overflow: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+      background: #111827;
+      border: 1px solid #374151;
+      border-radius: 6px;
+      padding: 10px;
+      font-size: 12px;
+      line-height: 1.5;
+      color: #e5e7eb;
+    }
+  </style>
+</head>
+<body>
+  <h3>⚡ Live Highlight Viewer</h3>
+  <p>Highlight text on any page. The latest selection appears here.</p>
+  <p style="font-size:11px;margin-bottom:10px;">
+    Using Vercel? Set your app URL in
+    <a href="#" id="openOptions" style="color:#a5b4fc;">extension options</a>.
+  </p>
+  <div id="status">Waiting for highlighted text...</div>
+  <div id="selectedText">No text captured yet.</div>
+  <script src="popup.js"></script>
+</body>
+</html>

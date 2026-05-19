@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>ResumeSnap Options</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        max-width: 520px;
+        margin: 24px auto;
+        padding: 0 16px;
+        line-height: 1.5;
+      }
+      label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 8px;
+      }
+      input {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 10px;
+        font-size: 14px;
+      }
+      button {
+        margin-top: 12px;
+        padding: 10px 16px;
+        font-size: 14px;
+        cursor: pointer;
+      }
+      p {
+        color: #555;
+        font-size: 13px;
+      }
+      #status {
+        margin-top: 12px;
+        font-size: 13px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>ResumeSnap</h1>
+    <p>
+      Paste your deployed app URL (Vercel). Highlights will be sent to
+      <code>/api/highlight</code> on that host.
+    </p>
+    <label for="apiBase">App URL</label>
+    <input
+      id="apiBase"
+      type="url"
+      placeholder="https://your-app.vercel.app"
+      autocomplete="url"
+    />
+    <button type="button" id="save">Save</button>
+    <p id="status"></p>
+    <script src="options.js"></script>
+  </body>
+</html>

@@ -1,0 +1,6 @@
+.env.local
+.DS_Store
+llm_layer/.venv/
+frontend/node_modules/
+frontend/.next/
+frontend/.env.local
