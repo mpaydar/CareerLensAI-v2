@@ -6,6 +6,7 @@ import os
 import shutil
 import sys
 import tempfile
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Annotated
@@ -20,7 +21,19 @@ from extract import analyze_gap  # noqa: E402
 from interview_prep import generate_interview_plan  # noqa: E402
 from optimize_context import build_optimize_context_from_text  # noqa: E402
 
-app = FastAPI(title="CareerLens LLM Layer", version="1.0.0")
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    """Warm SpaCy model at startup so first /gap/analyze is fast."""
+    try:
+        from extract import _get_nlp  # noqa: PLC0415
+
+        _get_nlp()
+    except Exception as exc:  # noqa: BLE001
+        print(f"[llm_layer] SpaCy warmup failed: {exc}", file=sys.stderr)
+    yield
+
+
+app = FastAPI(title="CareerLens LLM Layer", version="1.0.0", lifespan=lifespan)
 
 
 def verify_secret(
@@ -65,9 +78,18 @@ def _require_ffmpeg() -> None:
 @app.get("/health")
 def health() -> dict[str, str]:
     ffmpeg_path = shutil.which("ffmpeg")
+    spacy_status = "ok"
+    try:
+        from extract import _get_nlp  # noqa: PLC0415
+
+        _get_nlp()
+    except Exception as exc:  # noqa: BLE001
+        spacy_status = str(exc)[:200]
+
     return {
-        "status": "ok",
+        "status": "ok" if spacy_status == "ok" else "degraded",
         "ffmpeg": ffmpeg_path if ffmpeg_path else "missing",
+        "spacy": spacy_status,
     }
 
 

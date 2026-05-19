@@ -1,10 +1,19 @@
 import { spawn } from "child_process";
 import path from "path";
 import type { GapAnalysis } from "@/lib/gap-analysis-types";
+import { normalizeGapAnalysis } from "@/lib/gap-analysis-normalize";
 import { runGeminiGapAnalysis } from "@/lib/gap-analysis-gemini";
+import type { GapAnalysisEngine } from "@/lib/gap-types";
+import { focusJobDescription } from "@/lib/job-description";
 import { getLlmLayerUrl, llmLayerGapAnalyze } from "@/lib/llm-layer-client";
 import { getPythonCommand, SKILLS_SERVICE_DIR } from "@/lib/python-env";
 import { readResumeText } from "@/lib/resume-text";
+
+export type { GapAnalysisEngine } from "@/lib/gap-types";
+
+export type GapAnalysisRunResult = GapAnalysis & {
+  analysisEngine: GapAnalysisEngine;
+};
 
 export type {
   ContextMismatchDetail,
@@ -78,7 +87,9 @@ async function runPythonGapAnalysis(
           reject(new Error(parsed.error || `Analysis exited with ${code}`));
           return;
         }
-        resolve(parsed);
+        resolve(
+          normalizeGapAnalysis(parsed, jobDescription),
+        );
       } catch {
         reject(new Error(stderr.trim() || "Invalid analysis output"));
       }
@@ -93,34 +104,43 @@ async function runLlmLayerGapAnalysis(
   resumePath: string,
   jobDescription: string,
   userId?: string,
-): Promise<GapAnalysis> {
+): Promise<GapAnalysisRunResult> {
   const resumeText = await readResumeText(resumePath, userId);
-  const result = await llmLayerGapAnalyze(resumeText, jobDescription);
-  return result as GapAnalysis;
+  const focusedJd = focusJobDescription(jobDescription);
+  const result = await llmLayerGapAnalyze(resumeText, focusedJd);
+  return {
+    ...normalizeGapAnalysis(result as Partial<GapAnalysis>, focusedJd),
+    analysisEngine: "spacy",
+  };
 }
 
 export async function runGapAnalysis(
   resumePath: string,
   jobDescription: string,
   userId?: string,
-): Promise<GapAnalysis> {
+): Promise<GapAnalysisRunResult> {
+  const focusedJd = focusJobDescription(jobDescription);
+
   if (getLlmLayerUrl()) {
-    return runLlmLayerGapAnalysis(resumePath, jobDescription, userId);
+    return runLlmLayerGapAnalysis(resumePath, focusedJd, userId);
   }
 
   if (useGeminiGapAnalysis()) {
     const resumeText = await readResumeText(resumePath, userId);
-    return runGeminiGapAnalysis(resumeText, jobDescription);
+    const analysis = await runGeminiGapAnalysis(resumeText, focusedJd);
+    return { ...analysis, analysisEngine: "gemini" };
   }
 
   try {
-    return await runPythonGapAnalysis(resumePath, jobDescription, userId);
+    const analysis = await runPythonGapAnalysis(resumePath, focusedJd, userId);
+    return { ...analysis, analysisEngine: "python-local" };
   } catch (pythonError) {
     // Local dev: prefer LLM layer or Python; only use Gemini on Vercel without Railway.
     if (process.env.VERCEL) {
       try {
         const resumeText = await readResumeText(resumePath, userId);
-        return runGeminiGapAnalysis(resumeText, jobDescription);
+        const analysis = await runGeminiGapAnalysis(resumeText, focusedJd);
+        return { ...analysis, analysisEngine: "gemini" };
       } catch {
         throw pythonError;
       }

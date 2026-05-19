@@ -195,9 +195,56 @@ def _display_label(phrase: str) -> str:
     return " ".join(titled)
 
 
+def focus_job_description(text: str) -> str:
+    """Drop LinkedIn search chrome; keep About the job / requirements sections."""
+    cleaned = text.replace("\r\n", "\n").strip()
+    if len(cleaned) < 600:
+        return cleaned
+
+    lower = cleaned.lower()
+    start = -1
+    for marker in (
+        "about the job",
+        "job description",
+        "about this role",
+        "the role",
+    ):
+        idx = lower.find(marker)
+        if idx >= 0 and (start < 0 or idx < start):
+            start = idx
+    if start > 0:
+        cleaned = cleaned[start:]
+
+    stop_markers = (
+        "\nExclusive Job Seeker Insights",
+        "\nAbout the company",
+        "\nSet job alert for",
+        "\nAre these results helpful",
+        "\nCandidates who clicked apply",
+    )
+    for marker in stop_markers:
+        idx = cleaned.find(marker)
+        if idx > 150:
+            cleaned = cleaned[:idx].strip()
+
+    if len(cleaned) > 14_000:
+        qual = re.search(
+            r"\b(qualifications|requirements|must have|key responsibilities)\b",
+            cleaned,
+            re.IGNORECASE,
+        )
+        if qual and qual.start() > 0:
+            cleaned = cleaned[max(0, qual.start() - 120) : qual.start() + 12_000]
+        else:
+            cleaned = cleaned[:14_000]
+
+    return cleaned.strip()
+
+
 def analyze_gap(resume_text: str, job_description: str) -> dict:
     from skill_context import enrich_gap_with_context
 
+    job_description = focus_job_description(job_description)
     resume_skills = extract_skills(resume_text)
     jd_skills = extract_skills(job_description)
 

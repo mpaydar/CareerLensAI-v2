@@ -409,7 +409,10 @@ export function SkillGapDashboard({
               Skills gap dashboard
             </h2>
             <p className="text-xs text-zinc-500">
-              SpaCy · keyword match + contextual fit ·{" "}
+              {analysis?.analysisEngine === "gemini"
+                ? "Gemini (fallback — set LLM_LAYER_URL for SpaCy)"
+                : "SpaCy"}{" "}
+              · keyword match + contextual fit ·{" "}
               {analysis?.resumeFileName ?? "Resume"}
             </p>
           </div>

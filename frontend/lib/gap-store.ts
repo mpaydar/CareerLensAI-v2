@@ -39,7 +39,11 @@ export async function getStoredGapAnalysis(
 export async function saveGapAnalysis(
   userId: string,
   analysis: GapAnalysis,
-  meta: { jobDescriptionPreview: string; resumeFileName: string },
+  meta: {
+    jobDescriptionPreview: string;
+    resumeFileName: string;
+    analysisEngine?: StoredGapAnalysis["analysisEngine"];
+  },
 ): Promise<StoredGapAnalysis> {
   const stored: StoredGapAnalysis = {
     ...analysis,

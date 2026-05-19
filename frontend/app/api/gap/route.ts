@@ -6,6 +6,7 @@ import {
   getStoredGapAnalysis,
   saveGapAnalysis,
 } from "@/lib/gap-store";
+import { focusJobDescription } from "@/lib/job-description";
 import { runGapAnalysis } from "@/lib/skills-analyzer";
 import {
   ensureResumeFilePath,
@@ -49,11 +50,11 @@ export async function POST(request: Request) {
       );
     }
 
-    let jobDescription = highlight.text.trim();
+    let jobDescription = focusJobDescription(highlight.text.trim());
     try {
       const body = (await request.json()) as { jobDescription?: string };
       if (body.jobDescription?.trim()) {
-        jobDescription = body.jobDescription.trim();
+        jobDescription = focusJobDescription(body.jobDescription.trim());
       }
     } catch {
       // use stored highlight when body is empty
@@ -66,14 +67,19 @@ export async function POST(request: Request) {
     }
 
     const resumePath = await ensureResumeFilePath(user.id, resumeMeta);
-    const analysis = await runGapAnalysis(resumePath, jobDescription, user.id);
+    const { analysisEngine, ...analysis } = await runGapAnalysis(
+      resumePath,
+      jobDescription,
+      user.id,
+    );
 
     const stored = await saveGapAnalysis(user.id, analysis, {
       jobDescriptionPreview: jobDescription.slice(0, 280),
       resumeFileName: resumeMeta.originalFileName,
+      analysisEngine,
     });
 
-    return NextResponse.json({ analysis: stored });
+    return NextResponse.json({ analysis: stored, analysisEngine });
   } catch (e) {
     const message = e instanceof Error ? e.message : "analysis failed";
     if (message === "UNAUTHORIZED") {
