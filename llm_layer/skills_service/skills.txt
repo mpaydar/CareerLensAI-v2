@@ -1,0 +1,174 @@
+python
+javascript
+typescript
+java
+c++
+c#
+go
+rust
+ruby
+php
+swift
+kotlin
+scala
+matlab
+sql
+nosql
+mongodb
+postgresql
+mysql
+redis
+elasticsearch
+aws
+azure
+gcp
+docker
+kubernetes
+terraform
+ansible
+jenkins
+github actions
+ci/cd
+linux
+unix
+bash
+shell scripting
+react
+react.js
+next.js
+nextjs
+vue
+vue.js
+angular
+svelte
+node.js
+nodejs
+express
+django
+flask
+fastapi
+spring boot
+spring
+hibernate
+graphql
+rest api
+rest apis
+api design
+microservices
+serverless
+lambda
+machine learning
+deep learning
+nlp
+natural language processing
+computer vision
+tensorflow
+pytorch
+scikit-learn
+pandas
+numpy
+data analysis
+data science
+data engineering
+etl
+apache spark
+hadoop
+kafka
+airflow
+dbt
+snowflake
+databricks
+tableau
+power bi
+looker
+excel
+agile
+scrum
+jira
+confluence
+git
+github
+gitlab
+bitbucket
+figma
+sketch
+ui/ux
+user experience
+product management
+project management
+communication
+leadership
+teamwork
+problem solving
+critical thinking
+stakeholder management
+cross-functional
+saas
+b2b
+startup
+fintech
+healthcare
+e-commerce
+ecommerce
+cybersecurity
+security
+oauth
+jwt
+authentication
+authorization
+testing
+unit testing
+integration testing
+jest
+cypress
+selenium
+playwright
+tdd
+devops
+site reliability
+observability
+prometheus
+grafana
+splunk
+datadog
+blockchain
+solidity
+web3
+mobile development
+ios
+android
+react native
+flutter
+object-oriented programming
+functional programming
+design patterns
+system design
+distributed systems
+networking
+tcp/ip
+html
+css
+tailwind
+bootstrap
+webpack
+vite
+npm
+yarn
+pnpm
+data engineer
+data engineering
+data pipeline
+data pipelines
+etl pipeline
+public relations
+strategic communications
+spacy
+openai
+llm
+large language models
+prompt engineering
+vector databases
+pinecone
+weaviate
+rag
+retrieval augmented generation
