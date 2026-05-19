@@ -1,15 +1,7 @@
-import { mkdir, unlink, writeFile } from "fs/promises";
-import path from "path";
 import { NextResponse } from "next/server";
-import { transcribeAudioFile } from "@/lib/interview-coach";
-
-const UPLOAD_DIR = process.env.VERCEL
-  ? path.join("/tmp", "resumesnap-interview-audio")
-  : path.join(process.cwd(), ".interview-audio");
+import { transcribeAudioBuffer } from "@/lib/interview-coach";
 
 export async function POST(request: Request) {
-  let tempPath: string | null = null;
-
   try {
     const formData = await request.formData();
     const file = formData.get("audio");
@@ -33,23 +25,15 @@ export async function POST(request: Request) {
       );
     }
 
-    await mkdir(UPLOAD_DIR, { recursive: true });
-    const ext = file.name?.endsWith(".wav") ? ".wav" : ".webm";
-    tempPath = path.join(UPLOAD_DIR, `clip-${Date.now()}${ext}`);
-    await writeFile(tempPath, buffer);
-
-    const text = await transcribeAudioFile(tempPath);
+    const name = file.name || "answer.webm";
+    const text = await transcribeAudioBuffer(buffer, name);
     return NextResponse.json({ text });
   } catch (e) {
     let message = e instanceof Error ? e.message : "transcription failed";
     if (/ffmpeg/i.test(message) && /no such file/i.test(message)) {
       message =
-        "ffmpeg is not installed. Run: brew install ffmpeg — then restart the LLM layer (uvicorn).";
+        "Whisper on Railway needs ffmpeg. Redeploy the llm_layer service after confirming /health shows ffmpeg installed.";
     }
     return NextResponse.json({ error: message }, { status: 500 });
-  } finally {
-    if (tempPath) {
-      await unlink(tempPath).catch(() => {});
-    }
   }
 }

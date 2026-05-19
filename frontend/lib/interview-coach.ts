@@ -7,7 +7,22 @@ import {
   llmLayerInterviewPlan,
   llmLayerTranscribe,
 } from "@/lib/llm-layer-client";
-import { getPythonCommand, SKILLS_SERVICE_DIR } from "@/lib/python-env";
+import {
+  canSpawnLocalPython,
+  getPythonCommand,
+  llmLayerSetupHint,
+  SKILLS_SERVICE_DIR,
+} from "@/lib/python-env";
+
+function requireLlmLayerMessage(): string {
+  if (process.env.VERCEL) {
+    return [
+      "Interview prep and Whisper run on the LLM layer (Railway), not in the browser.",
+      "Set LLM_LAYER_URL and LLM_LAYER_SECRET on Vercel, then redeploy.",
+    ].join(" ");
+  }
+  return llmLayerSetupHint();
+}
 
 function runPythonScript(
   scriptName: string,
@@ -35,7 +50,7 @@ function runPythonScript(
     child.on("error", (err) => {
       reject(
         new Error(
-          `Failed to start Python (${pythonCmd}). Run: npm run llm:setup — ${err.message}`,
+          `Failed to start Python (${pythonCmd}). ${llmLayerSetupHint()} (${err.message})`,
         ),
       );
     });
@@ -67,6 +82,7 @@ function runPythonScript(
   });
 }
 
+/** Interview questions from SpaCy/LLM layer — not Gemini. */
 export async function generateInterviewPlan(
   gapSkills: string[],
 ): Promise<InterviewPlanResponse> {
@@ -75,34 +91,21 @@ export async function generateInterviewPlan(
     return result as InterviewPlanResponse;
   }
 
-  const result = await runPythonScript("interview_prep.py", { gapSkills });
-  return result as InterviewPlanResponse;
+  if (canSpawnLocalPython()) {
+    const result = await runPythonScript("interview_prep.py", { gapSkills });
+    return result as InterviewPlanResponse;
+  }
+
+  throw new Error(requireLlmLayerMessage());
 }
 
+/** Whisper transcription via Railway LLM layer (requires ffmpeg on the server). */
 export async function transcribeAudioBuffer(
   buffer: Buffer,
   filename: string,
-): Promise<string> {
-  if (getLlmLayerUrl()) {
-    return llmLayerTranscribe(
-      buffer,
-      filename,
-      process.env.WHISPER_MODEL || "base",
-    );
-  }
-
-  throw new Error(
-    "Whisper transcription requires LLM_LAYER_URL or local Python (not available on Vercel alone)",
-  );
-}
-
-export async function transcribeAudioFile(
-  audioPath: string,
   model = "base",
 ): Promise<string> {
   if (getLlmLayerUrl()) {
-    const buffer = await readFile(audioPath);
-    const filename = path.basename(audioPath);
     return llmLayerTranscribe(
       buffer,
       filename,
@@ -110,11 +113,33 @@ export async function transcribeAudioFile(
     );
   }
 
-  const result = await runPythonScript("transcribe_audio.py", {
-    audioPath,
-    model: process.env.WHISPER_MODEL || model,
-  });
-  return String(result.text ?? "");
+  if (canSpawnLocalPython()) {
+    const uploadDir = path.join(process.cwd(), ".interview-audio");
+    const { mkdir, writeFile, unlink } = await import("fs/promises");
+    await mkdir(uploadDir, { recursive: true });
+    const tempPath = path.join(uploadDir, `clip-${Date.now()}-${filename}`);
+    await writeFile(tempPath, buffer);
+    try {
+      const result = await runPythonScript("transcribe_audio.py", {
+        audioPath: tempPath,
+        model: process.env.WHISPER_MODEL || model,
+      });
+      return String(result.text ?? "");
+    } finally {
+      await unlink(tempPath).catch(() => {});
+    }
+  }
+
+  throw new Error(requireLlmLayerMessage());
+}
+
+export async function transcribeAudioFile(
+  audioPath: string,
+  model = "base",
+): Promise<string> {
+  const buffer = await readFile(audioPath);
+  const filename = path.basename(audioPath);
+  return transcribeAudioBuffer(buffer, filename, model);
 }
 
 /** Score user answer vs ideal; voice mode earns more points. */
