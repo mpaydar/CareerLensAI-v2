@@ -6,8 +6,8 @@ Monorepo for ResumeSnap / CareerLens:
 
 | Folder | Deploy to | Purpose |
 |--------|-----------|---------|
-| [`frontend/`](frontend/) | **Vercel** | Next.js app, accounts, Redis, Gemini bullet writing |
-| [`llm_layer/`](llm_layer/) | **Railway** | SpaCy gap analysis, optimize context, interview prep, Whisper |
+| [`frontend/`](frontend/) | **Vercel** | Next.js app, accounts, Redis, **Gemini** (resume bullets / projects only) |
+| [`llm_layer/`](llm_layer/) | **Railway** | **SpaCy** gap analysis + context fit, optimize context, interview prep, Whisper |
 | [`frontend/chrome-extension/`](frontend/chrome-extension/) | Chrome | Job-description highlighting |
 
 ## Quick start (local)
@@ -21,7 +21,7 @@ cp .env.example .env.local   # add GEMINI_API_KEY, Redis vars
 npm run dev
 ```
 
-**2. LLM layer** (optional but recommended for full SpaCy features)
+**2. LLM layer** (required for skills gap — SpaCy does not run inside Next.js)
 
 ```bash
 cd llm_layer

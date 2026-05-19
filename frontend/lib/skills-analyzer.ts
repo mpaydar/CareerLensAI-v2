@@ -2,7 +2,6 @@ import { spawn } from "child_process";
 import path from "path";
 import type { GapAnalysis } from "@/lib/gap-analysis-types";
 import { normalizeGapAnalysis } from "@/lib/gap-analysis-normalize";
-import { runGeminiGapAnalysis } from "@/lib/gap-analysis-gemini";
 import type { GapAnalysisEngine } from "@/lib/gap-types";
 import { jobDescriptionForAnalysis } from "@/lib/job-description";
 import { getLlmLayerUrl, llmLayerGapAnalyze } from "@/lib/llm-layer-client";
@@ -29,22 +28,17 @@ export type {
 
 const ANALYZE_SCRIPT = path.join(SKILLS_SERVICE_DIR, "analyze.py");
 
-function hasGeminiKey(): boolean {
-  return Boolean(
-    process.env.GEMINI_API_KEY?.trim() ||
-      process.env.GOOGLE_API_KEY?.trim() ||
-      process.env.GOOGLE_GENERATIVE_AI_API_KEY?.trim(),
-  );
-}
-
-async function runGeminiGapAnalysisRun(
-  resumePath: string,
-  jobDescription: string,
-  userId?: string,
-): Promise<GapAnalysisRunResult> {
-  const resumeText = await readResumeText(resumePath, userId);
-  const analysis = await runGeminiGapAnalysis(resumeText, jobDescription);
-  return { ...analysis, analysisEngine: "gemini" };
+function requireLlmLayerMessage(): string {
+  if (process.env.VERCEL) {
+    return [
+      "Skills gap analysis uses SpaCy on the LLM layer (Railway), not Gemini.",
+      "In Vercel → Settings → Environment Variables, set:",
+      "  LLM_LAYER_URL = https://your-app.up.railway.app",
+      "  LLM_LAYER_SECRET = (same value as Railway)",
+      "Redeploy Vercel after saving.",
+    ].join(" ");
+  }
+  return llmLayerSetupHint();
 }
 
 async function runPythonGapAnalysis(
@@ -53,11 +47,7 @@ async function runPythonGapAnalysis(
   userId?: string,
 ): Promise<GapAnalysis> {
   if (!canSpawnLocalPython()) {
-    throw new Error(
-      process.env.VERCEL
-        ? "LLM_LAYER_URL is not set on Vercel. Add your Railway URL in Project → Settings → Environment Variables."
-        : llmLayerSetupHint(),
-    );
+    throw new Error(requireLlmLayerMessage());
   }
 
   const resumeText = await readResumeText(resumePath, userId);
@@ -138,6 +128,10 @@ async function runLlmLayerGapAnalysis(
   };
 }
 
+/**
+ * Skills gap = SpaCy only (keyword + context), via Railway locally or in prod.
+ * Gemini is not used here — only resume optimize / project bullets use Gemini.
+ */
 export async function runGapAnalysis(
   resumePath: string,
   jobDescription: string,
@@ -146,35 +140,18 @@ export async function runGapAnalysis(
   const focusedJd = jobDescriptionForAnalysis(jobDescription);
   const llmUrl = getLlmLayerUrl();
 
-  // Production: Railway SpaCy via HTTP (never spawn python on Vercel).
   if (llmUrl) {
     return runLlmLayerGapAnalysis(resumePath, focusedJd, userId);
   }
 
   if (process.env.VERCEL) {
-    if (hasGeminiKey()) {
-      return runGeminiGapAnalysisRun(resumePath, focusedJd, userId);
-    }
-    throw new Error(
-      "LLM_LAYER_URL is not set on Vercel. Add your Railway service URL and LLM_LAYER_SECRET in Environment Variables.",
-    );
+    throw new Error(requireLlmLayerMessage());
   }
 
-  // Local: prefer LLM layer; fall back to venv Python, then Gemini.
-  if (!canSpawnLocalPython()) {
-    if (hasGeminiKey()) {
-      return runGeminiGapAnalysisRun(resumePath, focusedJd, userId);
-    }
-    throw new Error(llmLayerSetupHint());
-  }
-
-  try {
+  if (canSpawnLocalPython()) {
     const analysis = await runPythonGapAnalysis(resumePath, focusedJd, userId);
     return { ...analysis, analysisEngine: "python-local" };
-  } catch (pythonError) {
-    if (hasGeminiKey()) {
-      return runGeminiGapAnalysisRun(resumePath, focusedJd, userId);
-    }
-    throw pythonError;
   }
+
+  throw new Error(requireLlmLayerMessage());
 }
