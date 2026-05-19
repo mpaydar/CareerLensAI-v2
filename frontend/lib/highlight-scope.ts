@@ -1,6 +1,7 @@
 import {
   GLOBAL_HIGHLIGHT_SCOPE,
   getHighlightState,
+  type HighlightState,
 } from "@/lib/highlight-store";
 import { getSessionUserId } from "@/lib/session";
 
