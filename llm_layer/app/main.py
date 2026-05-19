@@ -64,9 +64,10 @@ def _require_ffmpeg() -> None:
 
 @app.get("/health")
 def health() -> dict[str, str]:
+    ffmpeg_path = shutil.which("ffmpeg")
     return {
         "status": "ok",
-        "ffmpeg": bool(shutil.which("ffmpeg")),
+        "ffmpeg": ffmpeg_path if ffmpeg_path else "missing",
     }
 
 

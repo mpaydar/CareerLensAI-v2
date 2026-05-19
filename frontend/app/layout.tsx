@@ -15,6 +15,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "ResumeSnap Live View",
   description: "Capture job highlights and upload your resume.",
+  other: {
+    "resumesnap-app": "1",
+  },
 };
 
 export default function RootLayout({

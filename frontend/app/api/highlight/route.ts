@@ -11,8 +11,12 @@ import { clearGapAnalysis } from "@/lib/gap-store";
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET,POST,DELETE,OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
+  "Access-Control-Allow-Headers": "Content-Type, X-ResumeSnap-Source",
 };
+
+function isExtensionRequest(request: Request): boolean {
+  return request.headers.get("x-resumesnap-source") === "extension";
+}
 
 export async function GET() {
   const state = await getHighlightForSession();
@@ -38,12 +42,16 @@ export async function POST(request: Request) {
       );
     }
 
-    // Extension POSTs from LinkedIn never send session cookies → always global.
     const globalState = await appendHighlightChunk(
       text,
       sourceUrl,
       GLOBAL_HIGHLIGHT_SCOPE,
     );
+
+    // Extension: global only (even if a session cookie is accidentally sent).
+    if (isExtensionRequest(request)) {
+      return NextResponse.json(globalState, { headers: CORS_HEADERS });
+    }
 
     const scopeId = await getHighlightScopeId();
     if (scopeId === GLOBAL_HIGHLIGHT_SCOPE) {

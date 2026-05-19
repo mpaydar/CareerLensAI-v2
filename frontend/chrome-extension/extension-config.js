@@ -8,6 +8,48 @@ const DEFAULT_HIGHLIGHT_ENDPOINTS = [
   "http://127.0.0.1:3001/api/highlight",
 ];
 
+/** When the dashboard tab loads, point the extension at that origin. */
+function syncApiBaseFromAppPage() {
+  if (typeof document === "undefined") {
+    return;
+  }
+  if (!document.querySelector('meta[name="resumesnap-app"]')) {
+    return;
+  }
+
+  const origin = window.location.origin;
+  const pattern = `${origin}/*`;
+
+  const saveOrigin = () => {
+    chrome.storage.local.set({ [API_BASE_STORAGE_KEY]: origin }, () => {
+      console.log("[ResumeSnap] API base synced to", origin);
+    });
+  };
+
+  if (!chrome.permissions?.request) {
+    saveOrigin();
+    return;
+  }
+
+  chrome.permissions.contains({ origins: [pattern] }, (hasPermission) => {
+    if (hasPermission) {
+      saveOrigin();
+      return;
+    }
+    chrome.permissions.request({ origins: [pattern] }, (granted) => {
+      if (granted) {
+        saveOrigin();
+      } else {
+        console.warn(
+          "[ResumeSnap] Allow access to",
+          origin,
+          "in extension options so highlights reach this app.",
+        );
+      }
+    });
+  });
+}
+
 function normalizeApiOrigin(raw) {
   const trimmed = (raw || "").trim();
   if (!trimmed) {
@@ -20,6 +62,11 @@ function normalizeApiOrigin(raw) {
     return "";
   }
 }
+
+const EXTENSION_FETCH_HEADERS = {
+  "Content-Type": "application/json",
+  "X-ResumeSnap-Source": "extension",
+};
 
 function getHighlightEndpoints() {
   return new Promise((resolve) => {

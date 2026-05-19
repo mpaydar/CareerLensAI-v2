@@ -1,5 +1,9 @@
 // content.js — bridge between the page (main world) and the ResumeSnap dev server.
 
+if (typeof syncApiBaseFromAppPage === "function") {
+  syncApiBaseFromAppPage();
+}
+
 const STORAGE_KEY = "latestHighlightedText";
 
 let lastPublishedText = "";
@@ -57,10 +61,12 @@ function postHighlightDirect(text, sourceUrl) {
     }
     return fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: EXTENSION_FETCH_HEADERS,
+      credentials: "omit",
       body: JSON.stringify(payload),
     }).then((response) => {
       if (response.ok) {
+        console.log("[ResumeSnap] highlight saved to", url);
         return response;
       }
       if (index + 1 < endpoints.length) {

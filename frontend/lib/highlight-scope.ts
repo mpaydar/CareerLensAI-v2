@@ -1,7 +1,6 @@
 import {
   GLOBAL_HIGHLIGHT_SCOPE,
   getHighlightState,
-  type HighlightState,
 } from "@/lib/highlight-store";
 import { getSessionUserId } from "@/lib/session";
 
@@ -10,32 +9,21 @@ export async function getHighlightScopeId(): Promise<string> {
   return userId ?? GLOBAL_HIGHLIGHT_SCOPE;
 }
 
-function highlightTimestamp(state: HighlightState): number {
-  const parsed = Date.parse(state.updatedAt);
-  return Number.isFinite(parsed) ? parsed : 0;
-}
-
-/** Prefer the newest highlight; extension writes global, dashboard may write user scope. */
+/**
+ * Live view highlights: the Chrome extension only writes the global scope (no
+ * session cookie). Prefer global whenever it has text so logged-in users still
+ * see LinkedIn captures instead of a stale per-user copy.
+ */
 export async function getHighlightForSession(): Promise<HighlightState> {
-  const userId = await getSessionUserId();
   const globalState = await getHighlightState(GLOBAL_HIGHLIGHT_SCOPE);
+  if (globalState.text.trim()) {
+    return globalState;
+  }
 
+  const userId = await getSessionUserId();
   if (!userId) {
     return globalState;
   }
 
-  const userState = await getHighlightState(userId);
-  const userHasText = Boolean(userState.text.trim());
-  const globalHasText = Boolean(globalState.text.trim());
-
-  if (!userHasText) {
-    return globalState;
-  }
-  if (!globalHasText) {
-    return userState;
-  }
-
-  return highlightTimestamp(globalState) >= highlightTimestamp(userState)
-    ? globalState
-    : userState;
+  return getHighlightState(userId);
 }

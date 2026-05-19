@@ -10,11 +10,12 @@ function postHighlight(payload, endpoints, index = 0) {
 
   return fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: EXTENSION_FETCH_HEADERS,
+    credentials: "omit",
     body: JSON.stringify(payload),
-  })
-    .then(async (response) => {
+  }).then(async (response) => {
       if (response.ok) {
+        console.log("[ResumeSnap] highlight saved to", url);
         return response;
       }
       const detail = await response.text();

@@ -98,6 +98,7 @@ function HomeApp() {
         const response = await fetch("/api/highlight", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
           body: JSON.stringify({ text, sourceUrl: window.location.href }),
         });
         if (!response.ok) {
@@ -122,8 +123,16 @@ function HomeApp() {
       }, 150);
     };
 
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        void pullLatestHighlight();
+      }
+    };
+
     pullLatestHighlight();
     const intervalId = window.setInterval(pullLatestHighlight, 500);
+    window.addEventListener("focus", pullLatestHighlight);
+    document.addEventListener("visibilitychange", onVisibilityChange);
     const onKeyUp = (event: KeyboardEvent) => {
       if (event.key === "Shift" || event.key.startsWith("Arrow")) {
         schedulePublishFromPage();
@@ -142,6 +151,8 @@ function HomeApp() {
       isMounted = false;
       window.clearInterval(intervalId);
       window.clearTimeout(selectionDebounce);
+      window.removeEventListener("focus", pullLatestHighlight);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
       document.removeEventListener("selectionchange", onSelectionChange);
       document.removeEventListener("mouseup", schedulePublishFromPage);
       document.removeEventListener("keyup", onKeyUp);
