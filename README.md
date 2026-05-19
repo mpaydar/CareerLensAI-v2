@@ -1,6 +1,5 @@
-<<<<<<< HEAD
-# CareerLensAI-_V2
-=======
+
+
 # CareerLens-AI
 
 Monorepo for ResumeSnap / CareerLens:
@@ -58,4 +57,3 @@ Load unpacked from `frontend/chrome-extension/` in `chrome://extensions`.
 - Env: `LLM_LAYER_SECRET` (same as Vercel)
 
 See [frontend/README.md](frontend/README.md) and [llm_layer/README.md](llm_layer/README.md) for details.
->>>>>>> 5e641bc (Monorepo: frontend + llm_layer)
