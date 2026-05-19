@@ -66,7 +66,7 @@ export async function POST(request: Request) {
     }
 
     const resumePath = await ensureResumeFilePath(user.id, resumeMeta);
-    const analysis = await runGapAnalysis(resumePath, jobDescription);
+    const analysis = await runGapAnalysis(resumePath, jobDescription, user.id);
 
     const stored = await saveGapAnalysis(user.id, analysis, {
       jobDescriptionPreview: jobDescription.slice(0, 280),

@@ -11,6 +11,7 @@
     "llm:setup": "cd ../llm_layer && python3 -m venv .venv && .venv/bin/pip install -r requirements.txt && .venv/bin/python -m spacy download en_core_web_sm"
   },
   "dependencies": {
+    "@napi-rs/canvas": "^1.0.0",
     "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.38.0",
     "mammoth": "^1.12.0",

@@ -96,6 +96,14 @@ function deliverHighlight(text, sourceUrl) {
     return;
   }
 
+  if (
+    /ReferenceError|DOMMatrix|Failed to load external module|ENOENT.*python/i.test(
+      selectedText,
+    )
+  ) {
+    return;
+  }
+
   const now = Date.now();
   if (selectedText === lastPublishedText && now - lastPublishedAt < 2500) {
     return;

@@ -2,6 +2,11 @@ import { mkdir, readFile, readdir, unlink, writeFile } from "fs/promises";
 import path from "path";
 import { clearGapAnalysis } from "@/lib/gap-store";
 import { getRedis } from "@/lib/redis";
+import {
+  clearResumeTextCache,
+  extractResumeTextFromBuffer,
+  saveResumeTextCache,
+} from "@/lib/resume-text";
 
 export type ResumeMeta = {
   originalFileName: string;
@@ -117,6 +122,7 @@ async function clearResumeFromRedis(userId: string): Promise<void> {
     return;
   }
   await redis.del(resumeMetaKey(userId), resumeDataKey(userId));
+  await clearResumeTextCache(userId);
 }
 
 async function saveResumeToRedis(
@@ -180,6 +186,7 @@ export async function saveResumeFromUpload(
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());
+  const extractedText = await extractResumeTextFromBuffer(buffer, ext);
 
   const meta: ResumeMeta = {
     originalFileName: file.name,
@@ -191,6 +198,7 @@ export async function saveResumeFromUpload(
 
   await clearResumeFromRedis(userId);
   await saveResumeToRedis(userId, meta, buffer);
+  await saveResumeTextCache(userId, extractedText);
 
   if (!getRedis()) {
     await saveResumeToDisk(userId, meta, buffer);

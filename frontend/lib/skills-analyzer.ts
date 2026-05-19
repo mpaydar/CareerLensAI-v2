@@ -22,8 +22,9 @@ function useGeminiGapAnalysis(): boolean {
 async function runPythonGapAnalysis(
   resumePath: string,
   jobDescription: string,
+  userId?: string,
 ): Promise<GapAnalysis> {
-  const resumeText = await readResumeText(resumePath);
+  const resumeText = await readResumeText(resumePath, userId);
   const payload = JSON.stringify({
     resumeText,
     jobDescription,
@@ -91,8 +92,9 @@ async function runPythonGapAnalysis(
 async function runLlmLayerGapAnalysis(
   resumePath: string,
   jobDescription: string,
+  userId?: string,
 ): Promise<GapAnalysis> {
-  const resumeText = await readResumeText(resumePath);
+  const resumeText = await readResumeText(resumePath, userId);
   const result = await llmLayerGapAnalyze(resumeText, jobDescription);
   return result as GapAnalysis;
 }
@@ -100,23 +102,24 @@ async function runLlmLayerGapAnalysis(
 export async function runGapAnalysis(
   resumePath: string,
   jobDescription: string,
+  userId?: string,
 ): Promise<GapAnalysis> {
   if (getLlmLayerUrl()) {
-    return runLlmLayerGapAnalysis(resumePath, jobDescription);
+    return runLlmLayerGapAnalysis(resumePath, jobDescription, userId);
   }
 
   if (useGeminiGapAnalysis()) {
-    const resumeText = await readResumeText(resumePath);
+    const resumeText = await readResumeText(resumePath, userId);
     return runGeminiGapAnalysis(resumeText, jobDescription);
   }
 
   try {
-    return await runPythonGapAnalysis(resumePath, jobDescription);
+    return await runPythonGapAnalysis(resumePath, jobDescription, userId);
   } catch (pythonError) {
     // Local dev: prefer LLM layer or Python; only use Gemini on Vercel without Railway.
     if (process.env.VERCEL) {
       try {
-        const resumeText = await readResumeText(resumePath);
+        const resumeText = await readResumeText(resumePath, userId);
         return runGeminiGapAnalysis(resumeText, jobDescription);
       } catch {
         throw pythonError;

@@ -49,7 +49,7 @@ export async function POST(request: Request) {
       resumePath,
       jobDescription,
       skill,
-      { mode, neededFor },
+      { mode, neededFor, userId: user.id },
     );
 
     return NextResponse.json(result);

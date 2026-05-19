@@ -149,8 +149,9 @@ async function pickOptimizeContextPython(
   resumePath: string,
   jobDescription: string,
   skill: string,
+  userId?: string,
 ): Promise<OptimizeContext> {
-  const resumeText = await readResumeText(resumePath);
+  const resumeText = await readResumeText(resumePath, userId);
   const result = await runPythonScript("optimize_context.py", {
     resumeText,
     jobDescription,
@@ -163,8 +164,9 @@ async function pickOptimizeContextLlmLayer(
   resumePath: string,
   jobDescription: string,
   skill: string,
+  userId?: string,
 ): Promise<OptimizeContext> {
-  const resumeText = await readResumeText(resumePath);
+  const resumeText = await readResumeText(resumePath, userId);
   const result = await llmLayerOptimizeContext(
     resumeText,
     jobDescription,
@@ -177,21 +179,27 @@ export async function pickOptimizeContext(
   resumePath: string,
   jobDescription: string,
   skill: string,
+  userId?: string,
 ): Promise<OptimizeContext> {
   if (getLlmLayerUrl()) {
-    return pickOptimizeContextLlmLayer(resumePath, jobDescription, skill);
+    return pickOptimizeContextLlmLayer(resumePath, jobDescription, skill, userId);
   }
 
   if (process.env.VERCEL) {
-    const resumeText = await readResumeText(resumePath);
+    const resumeText = await readResumeText(resumePath, userId);
     return pickOptimizeContextGemini(resumeText, jobDescription, skill);
   }
 
   try {
-    return await pickOptimizeContextPython(resumePath, jobDescription, skill);
+    return await pickOptimizeContextPython(
+      resumePath,
+      jobDescription,
+      skill,
+      userId,
+    );
   } catch (pythonError) {
     try {
-      const resumeText = await readResumeText(resumePath);
+      const resumeText = await readResumeText(resumePath, userId);
       return pickOptimizeContextGemini(resumeText, jobDescription, skill);
     } catch {
       throw pythonError;
@@ -255,9 +263,14 @@ export async function optimizeResumeBullet(
   resumePath: string,
   jobDescription: string,
   skill: string,
-  options: { mode?: OptimizeMode; neededFor?: string } = {},
+  options: { mode?: OptimizeMode; neededFor?: string; userId?: string } = {},
 ): Promise<OptimizeResult> {
-  const ctx = await pickOptimizeContext(resumePath, jobDescription, skill);
+  const ctx = await pickOptimizeContext(
+    resumePath,
+    jobDescription,
+    skill,
+    options.userId,
+  );
   const mode: OptimizeMode = options.mode ?? "reframe";
 
   if (mode === "missing") {
