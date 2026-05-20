@@ -75,7 +75,7 @@ brew install ffmpeg
 cd llm_layer
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements-full.txt
 python -m spacy download en_core_web_sm
 uvicorn app.main:app --reload --port 8000
 ```
