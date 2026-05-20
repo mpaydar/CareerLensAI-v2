@@ -1,15 +1,9 @@
-# Deploy llm_layer (FastAPI + SpaCy + Whisper) to Azure Web App snapResume
-# https://github.com/Azure/webapps-deploy
+# LEGACY: Azure snapResume deploy (disabled — LLM layer uses Google Cloud Run).
+# Re-enable push trigger here if you need Azure again.
 
 name: Build and deploy Python app to Azure Web App - snapResume
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - "llm_layer/**"
-      - ".github/workflows/main_snapresume.yml"
   workflow_dispatch:
 
 jobs:
@@ -24,7 +18,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.13"
 
       - name: Validate Azure-sized install (no Whisper/torch)
         working-directory: llm_layer

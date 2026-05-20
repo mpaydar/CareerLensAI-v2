@@ -53,7 +53,8 @@ Load unpacked from `frontend/chrome-extension/` in `chrome://extensions`.
 ### Cloud Run (buildpacks)
 
 - **Preferred source directory:** `llm_layer`
-- **GitHub → Cloud Run (repo root):** repo root includes `main.py`, `Procfile`, `requirements.txt`, `.python-version` that delegate to `llm_layer/` — **commit and push** (no `project.toml`; pack rejects it)
+- **GitHub → Cloud Run (repo root):** `main.py`, `Procfile`, `requirements.txt`, `.python-version` (3.13) at repo root
+- **Azure GitHub Action** is **manual-only** now (`workflow_dispatch`) — it does not deploy Cloud Run
 - Env: `LLM_LAYER_SECRET` (same as Vercel); set Vercel `LLM_LAYER_URL` to the Cloud Run service URL
 - After deploy, `curl $LLM_LAYER_URL/health` must return JSON, not “Placeholder | Cloud Run” HTML
 

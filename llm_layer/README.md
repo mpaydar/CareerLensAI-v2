@@ -14,7 +14,7 @@ Buildpack entry files in this folder:
 |------|---------|
 | `main.py` | Exposes `app` for `gunicorn main:app` / buildpack detection |
 | `Procfile` | `web: uvicorn app.main:app …` (overrides default) |
-| `.python-version` / `runtime.txt` | Python 3.11 (no `project.toml` — Cloud Build pack rejects it) |
+| `.python-version` / `runtime.txt` | Python **3.13** (ubuntu2404 buildpack has 3.13–3.14 only, not 3.11) |
 | `requirements.txt` | Dependencies (full stack; large build) |
 
 **Create service (console):** Deploy from repo → **Source directory** = `llm_layer` → buildpack (not Dockerfile).
