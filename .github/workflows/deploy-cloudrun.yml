@@ -1,0 +1,58 @@
+# Deploy llm_layer to Cloud Run (replaces broken auto-deploy Pull step).
+# One-time setup: add GitHub secret GCP_SA_KEY (JSON service account with Cloud Run Admin + SA User).
+
+name: Deploy llm-layer to Cloud Run
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "llm_layer/**"
+      - "main.py"
+      - "Procfile"
+      - "requirements.txt"
+      - ".python-version"
+      - ".github/workflows/deploy-cloudrun.yml"
+  workflow_dispatch:
+
+env:
+  PROJECT_ID: gen-lang-client-0977136682
+  REGION: us-south1
+  SERVICE: llmp-layer
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require GCP_SA_KEY
+        run: |
+          if [ -z "$GCP_SA_KEY" ]; then
+            echo "::error::Add GitHub secret GCP_SA_KEY (service account JSON). See docs/cloud-run-deploy.md"
+            exit 1
+          fi
+        env:
+          GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+      - uses: actions/checkout@v4
+
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Deploy to Cloud Run from llm_layer
+        run: |
+          gcloud run deploy "${{ env.SERVICE }}" \
+            --project "${{ env.PROJECT_ID }}" \
+            --region "${{ env.REGION }}" \
+            --source llm_layer \
+            --allow-unauthenticated \
+            --memory 2Gi \
+            --cpu 1 \
+            --timeout 300 \
+            --min-instances 0 \
+            --max-instances 3 \
+            --set-env-vars "LLM_LAYER_SECRET=${{ secrets.LLM_LAYER_SECRET }}"
