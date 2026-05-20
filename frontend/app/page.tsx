@@ -68,7 +68,16 @@ function HomeApp() {
         const data = (await response.json()) as HighlightResponse;
 
         if (isMounted) {
-          setHighlight(data);
+          setHighlight((prev) => {
+            if (
+              prev.text === data.text &&
+              prev.updatedAt === data.updatedAt &&
+              prev.jobId === data.jobId
+            ) {
+              return prev;
+            }
+            return data;
+          });
           setIsOnline(true);
           if (!data.text.trim()) {
             setGapAnalysis(null);
@@ -312,7 +321,7 @@ function HomeApp() {
 
   const statusLabel = useMemo(() => {
     if (!isOnline) {
-      return "Disconnected from local API";
+      return "Cannot reach highlight API — check extension URL and Redis on Vercel";
     }
     if (!highlight.text) {
       return "Waiting for highlighted text...";

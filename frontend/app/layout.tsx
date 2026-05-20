@@ -15,9 +15,6 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "ResumeSnap Live View",
   description: "Capture job highlights and upload your resume.",
-  other: {
-    "resumesnap-app": "1",
-  },
 };
 
 export default function RootLayout({
@@ -28,8 +25,12 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      data-resumesnap-app="1"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
+      <head>
+        <meta name="resumesnap-app" content="1" />
+      </head>
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );

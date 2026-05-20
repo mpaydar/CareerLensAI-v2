@@ -8,12 +8,22 @@ const DEFAULT_HIGHLIGHT_ENDPOINTS = [
   "http://127.0.0.1:3001/api/highlight",
 ];
 
+function isResumeSnapAppPage() {
+  if (typeof document === "undefined") {
+    return false;
+  }
+  if (document.querySelector('meta[name="resumesnap-app"]')) {
+    return true;
+  }
+  if (document.documentElement?.dataset?.resumesnapApp === "1") {
+    return true;
+  }
+  return document.title.includes("ResumeSnap");
+}
+
 /** When the dashboard tab loads, point the extension at that origin. */
 function syncApiBaseFromAppPage() {
-  if (typeof document === "undefined") {
-    return;
-  }
-  if (!document.querySelector('meta[name="resumesnap-app"]')) {
+  if (!isResumeSnapAppPage()) {
     return;
   }
 

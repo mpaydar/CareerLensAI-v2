@@ -10,21 +10,39 @@ export async function getHighlightScopeId(): Promise<string> {
   return userId ?? GLOBAL_HIGHLIGHT_SCOPE;
 }
 
+function pickNewerHighlight(
+  a: HighlightState,
+  b: HighlightState,
+): HighlightState {
+  const aTime = Date.parse(a.updatedAt) || 0;
+  const bTime = Date.parse(b.updatedAt) || 0;
+  if (aTime === bTime) {
+    return a.text.length >= b.text.length ? a : b;
+  }
+  return aTime >= bTime ? a : b;
+}
+
 /**
- * Live view highlights: the Chrome extension only writes the global scope (no
- * session cookie). Prefer global whenever it has text so logged-in users still
- * see LinkedIn captures instead of a stale per-user copy.
+ * Chrome extension writes global scope only. Logged-in users may also have
+ * per-user highlights from in-app selection — return the newest non-empty state.
  */
 export async function getHighlightForSession(): Promise<HighlightState> {
   const globalState = await getHighlightState(GLOBAL_HIGHLIGHT_SCOPE);
-  if (globalState.text.trim()) {
-    return globalState;
-  }
-
   const userId = await getSessionUserId();
   if (!userId) {
     return globalState;
   }
 
-  return getHighlightState(userId);
+  const userState = await getHighlightState(userId);
+  const globalText = globalState.text.trim();
+  const userText = userState.text.trim();
+
+  if (!globalText) {
+    return userState;
+  }
+  if (!userText) {
+    return globalState;
+  }
+
+  return pickNewerHighlight(globalState, userState);
 }

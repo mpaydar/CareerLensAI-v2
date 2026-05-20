@@ -2,6 +2,12 @@
 
 if (typeof syncApiBaseFromAppPage === "function") {
   syncApiBaseFromAppPage();
+  window.addEventListener("load", syncApiBaseFromAppPage);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+      syncApiBaseFromAppPage();
+    }
+  });
 }
 
 const STORAGE_KEY = "latestHighlightedText";

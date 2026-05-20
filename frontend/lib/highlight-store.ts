@@ -78,10 +78,19 @@ async function readState(scopeId: string): Promise<HighlightState> {
   return readStateFromFile(scopeId);
 }
 
+function assertHighlightPersistence(): void {
+  if (process.env.VERCEL && !getRedis()) {
+    throw new Error(
+      "Highlights on Vercel require Upstash Redis. Set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN in the Vercel project, then redeploy.",
+    );
+  }
+}
+
 async function writeState(
   scopeId: string,
   state: HighlightState,
 ): Promise<HighlightState> {
+  assertHighlightPersistence();
   const redis = getRedis();
   if (redis) {
     await redis.set(redisHighlightKey(scopeId), state);

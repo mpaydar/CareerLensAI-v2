@@ -14,6 +14,10 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Headers": "Content-Type, X-ResumeSnap-Source",
 };
 
+const NO_CACHE_HEADERS = {
+  "Cache-Control": "no-store, no-cache, must-revalidate",
+};
+
 function isExtensionRequest(request: Request): boolean {
   return request.headers.get("x-resumesnap-source") === "extension";
 }
@@ -21,7 +25,7 @@ function isExtensionRequest(request: Request): boolean {
 export async function GET() {
   const state = await getHighlightForSession();
   return NextResponse.json(state, {
-    headers: CORS_HEADERS,
+    headers: { ...CORS_HEADERS, ...NO_CACHE_HEADERS },
   });
 }
 
@@ -50,12 +54,16 @@ export async function POST(request: Request) {
 
     // Extension: global only (even if a session cookie is accidentally sent).
     if (isExtensionRequest(request)) {
-      return NextResponse.json(globalState, { headers: CORS_HEADERS });
+      return NextResponse.json(globalState, {
+        headers: { ...CORS_HEADERS, ...NO_CACHE_HEADERS },
+      });
     }
 
     const scopeId = await getHighlightScopeId();
     if (scopeId === GLOBAL_HIGHLIGHT_SCOPE) {
-      return NextResponse.json(globalState, { headers: CORS_HEADERS });
+      return NextResponse.json(globalState, {
+        headers: { ...CORS_HEADERS, ...NO_CACHE_HEADERS },
+      });
     }
 
     const userState = await appendHighlightChunk(text, sourceUrl, scopeId);
@@ -64,11 +72,16 @@ export async function POST(request: Request) {
         ? userState
         : globalState;
 
-    return NextResponse.json(state, { headers: CORS_HEADERS });
-  } catch {
+    return NextResponse.json(state, {
+      headers: { ...CORS_HEADERS, ...NO_CACHE_HEADERS },
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "highlight save failed";
+    const status = /redis|upstash/i.test(message) ? 503 : 400;
     return NextResponse.json(
-      { error: "invalid request body" },
-      { status: 400, headers: CORS_HEADERS },
+      { error: message },
+      { status, headers: CORS_HEADERS },
     );
   }
 }
