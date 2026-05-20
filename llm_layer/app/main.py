@@ -36,6 +36,20 @@ async def lifespan(_app: FastAPI):
 app = FastAPI(title="CareerLens LLM Layer", version="1.0.0", lifespan=lifespan)
 
 
+@app.get("/")
+def root() -> dict[str, str | list[str]]:
+    """Azure/browser probe — use GET /health for readiness."""
+    return {
+        "service": "CareerLens LLM Layer",
+        "health": "/health",
+        "endpoints": [
+            "POST /gap/analyze",
+            "POST /optimize/context",
+            "POST /interview/plan",
+        ],
+    }
+
+
 def verify_secret(
     authorization: Annotated[str | None, Header()] = None,
 ) -> None:

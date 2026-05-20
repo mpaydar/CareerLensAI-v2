@@ -8,10 +8,14 @@ Deploy this folder to [Railway](https://railway.app) (root directory: `llm_layer
 
 After GitHub Actions deploys `llm_layer` to the site root:
 
-1. **Configuration → General settings → Startup Command:** `bash startup.sh`
+1. **Configuration → General settings → Startup Command:** `bash startup.sh`  
+   (If you skip this, Azure may run the default Flask placeholder and every URL returns HTML `404 Not Found`.)
 2. **Application settings:** `LLM_LAYER_SECRET`, optional `WHISPER_MODEL` (same names as Railway)
-3. **Verify:** `curl https://<your-app>.azurewebsites.net/health`
+3. **Verify:** `curl https://<your-app>.azurewebsites.net/health` → JSON with `"spacy":"ok"`  
+   Root `GET /` should return JSON `service`, not HTML.
 4. Set Vercel `LLM_LAYER_URL` to that URL (not localhost).
+
+**Troubleshooting HTML 404:** Wrong app is running. Set startup command, **Save**, then **Restart** the App Service. Check **Log stream** for `uvicorn` or `gunicorn` startup lines.
 
 **Whisper:** Azure deploy uses `requirements-azure.txt` (no `openai-whisper` / PyTorch) so Oryx does not run out of disk. `/health` shows `"whisper":"disabled"`. Gap analysis and interview questions work on Azure; **voice transcription** should use Railway/Docker (`requirements.txt` + `Dockerfile`).
 
