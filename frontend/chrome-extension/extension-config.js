@@ -1,6 +1,14 @@
 // Shared endpoint resolver for content script and service worker.
 const API_BASE_STORAGE_KEY = "apiBaseUrl";
 
+function isExtensionContextValid() {
+  try {
+    return Boolean(chrome.runtime?.id);
+  } catch {
+    return false;
+  }
+}
+
 const DEFAULT_HIGHLIGHT_ENDPOINTS = [
   "http://localhost:3000/api/highlight",
   "http://127.0.0.1:3000/api/highlight",
@@ -31,12 +39,21 @@ function syncApiBaseFromAppPage() {
   const pattern = `${origin}/*`;
 
   const saveOrigin = () => {
-    chrome.storage.local.set({ [API_BASE_STORAGE_KEY]: origin }, () => {
-      console.log("[ResumeSnap] API base synced to", origin);
-    });
+    if (!isExtensionContextValid()) {
+      return;
+    }
+    try {
+      chrome.storage.local.set({ [API_BASE_STORAGE_KEY]: origin }, () => {
+        if (!chrome.runtime.lastError) {
+          console.log("[ResumeSnap] API base synced to", origin);
+        }
+      });
+    } catch {
+      // Extension was reloaded — refresh this tab.
+    }
   };
 
-  if (!chrome.permissions?.request) {
+  if (!isExtensionContextValid() || !chrome.permissions?.request) {
     saveOrigin();
     return;
   }
@@ -80,14 +97,22 @@ const EXTENSION_FETCH_HEADERS = {
 
 function getHighlightEndpoints() {
   return new Promise((resolve) => {
-    chrome.storage.local.get([API_BASE_STORAGE_KEY], (result) => {
-      const endpoints = [...DEFAULT_HIGHLIGHT_ENDPOINTS];
-      const origin = normalizeApiOrigin(result[API_BASE_STORAGE_KEY]);
-      if (origin) {
-        endpoints.unshift(`${origin}/api/highlight`);
-      }
+    const endpoints = [...DEFAULT_HIGHLIGHT_ENDPOINTS];
+    if (!isExtensionContextValid()) {
       resolve(endpoints);
-    });
+      return;
+    }
+    try {
+      chrome.storage.local.get([API_BASE_STORAGE_KEY], (result) => {
+        const origin = normalizeApiOrigin(result[API_BASE_STORAGE_KEY]);
+        if (origin) {
+          endpoints.unshift(`${origin}/api/highlight`);
+        }
+        resolve(endpoints);
+      });
+    } catch {
+      resolve(endpoints);
+    }
   });
 }
 
@@ -97,13 +122,21 @@ const DEFAULT_APPLICATION_ENDPOINTS = DEFAULT_HIGHLIGHT_ENDPOINTS.map((url) =>
 
 function getApplicationEndpoints() {
   return new Promise((resolve) => {
-    chrome.storage.local.get([API_BASE_STORAGE_KEY], (result) => {
-      const endpoints = [...DEFAULT_APPLICATION_ENDPOINTS];
-      const origin = normalizeApiOrigin(result[API_BASE_STORAGE_KEY]);
-      if (origin) {
-        endpoints.unshift(`${origin}/api/applications`);
-      }
+    const endpoints = [...DEFAULT_APPLICATION_ENDPOINTS];
+    if (!isExtensionContextValid()) {
       resolve(endpoints);
-    });
+      return;
+    }
+    try {
+      chrome.storage.local.get([API_BASE_STORAGE_KEY], (result) => {
+        const origin = normalizeApiOrigin(result[API_BASE_STORAGE_KEY]);
+        if (origin) {
+          endpoints.unshift(`${origin}/api/applications`);
+        }
+        resolve(endpoints);
+      });
+    } catch {
+      resolve(endpoints);
+    }
   });
 }

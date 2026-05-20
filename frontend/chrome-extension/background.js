@@ -2,6 +2,12 @@ importScripts("extension-config.js");
 
 const injectedTabs = new Set();
 
+chrome.runtime.onInstalled.addListener(() => {
+  console.log(
+    "[ResumeSnap] Extension updated — refresh open LinkedIn tabs, then open your dashboard once to sync the API URL.",
+  );
+});
+
 function postHighlight(payload, endpoints, index = 0) {
   const url = endpoints[index];
   if (!url) {

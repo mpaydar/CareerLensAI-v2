@@ -44,17 +44,33 @@ function isLinkedInHost() {
   return /(^|\.)linkedin\.com$/i.test(window.location.hostname);
 }
 
+function isExtensionContextValid() {
+  try {
+    return Boolean(chrome.runtime?.id);
+  } catch {
+    return false;
+  }
+}
+
 function requestPageWorldBridge() {
-  if (pageBridgeRequested || !isLinkedInHost()) {
+  if (pageBridgeRequested || !isLinkedInHost() || !isExtensionContextValid()) {
     return;
   }
   pageBridgeRequested = true;
-  chrome.runtime.sendMessage({ type: "INJECT_PAGE_SELECTION" }, () => {
-    if (chrome.runtime.lastError) {
-      console.warn("[ResumeSnap] page bridge inject:", chrome.runtime.lastError.message);
-      pageBridgeRequested = false;
-    }
-  });
+  try {
+    chrome.runtime.sendMessage({ type: "INJECT_PAGE_SELECTION" }, () => {
+      if (chrome.runtime.lastError) {
+        console.warn("[ResumeSnap] page bridge inject:", chrome.runtime.lastError.message);
+        pageBridgeRequested = false;
+      }
+    });
+  } catch (error) {
+    console.warn(
+      "[ResumeSnap] Extension was reloaded — refresh this LinkedIn tab, then highlight again.",
+      error,
+    );
+    pageBridgeRequested = false;
+  }
 }
 
 function postHighlightDirect(text, sourceUrl) {
@@ -117,24 +133,30 @@ function deliverHighlight(text, sourceUrl) {
 
   lastPublishedText = selectedText;
   lastPublishedAt = now;
-  chrome.storage.local.set({ [STORAGE_KEY]: selectedText });
 
-  chrome.runtime.sendMessage(
-    {
-      type: "HIGHLIGHT_CAPTURED",
-      text: selectedText,
-      sourceUrl: sourceUrl || window.location.href,
-    },
-    () => {
-      if (chrome.runtime.lastError) {
-        postHighlightDirect(selectedText, sourceUrl || window.location.href).catch(
-          (err) => {
-            console.warn("[ResumeSnap] highlight POST failed:", err);
-          },
-        );
-      }
-    },
-  );
+  const source = sourceUrl || window.location.href;
+  const publish = () => {
+    postHighlightDirect(selectedText, source).catch((err) => {
+      console.warn("[ResumeSnap] highlight POST failed:", err);
+    });
+  };
+
+  if (!isExtensionContextValid()) {
+    console.warn(
+      "[ResumeSnap] Extension was reloaded. Refresh this LinkedIn tab (F5), open your ResumeSnap dashboard once, then highlight again.",
+    );
+    publish();
+    return;
+  }
+
+  try {
+    chrome.storage.local.set({ [STORAGE_KEY]: selectedText }, () => void 0);
+  } catch {
+    // Context invalidated between checks.
+  }
+
+  // Post directly from the content script (avoids background message-channel timeouts).
+  publish();
 
   console.log("[ResumeSnap] captured:", selectedText.slice(0, 80));
 }
@@ -184,45 +206,57 @@ document.addEventListener("keyup", (event) => {
   }
 });
 
+function postApplicationDirect(payload) {
+  const tryPost = (endpoints, index) => {
+    const url = endpoints[index];
+    if (!url) {
+      return Promise.reject(new Error("no application endpoints"));
+    }
+    return fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }).then((response) => {
+      if (response.ok) {
+        return response;
+      }
+      if (index + 1 < endpoints.length) {
+        return tryPost(endpoints, index + 1);
+      }
+      throw new Error(`HTTP ${response.status}`);
+    });
+  };
+  return getApplicationEndpoints().then((endpoints) => tryPost(endpoints, 0));
+}
+
 function reportEasyApply(payload) {
-  chrome.runtime.sendMessage(
-    {
-      type: "EASY_APPLY_DETECTED",
-      jobId: payload.jobId,
-      sourceUrl: payload.sourceUrl,
-      appliedAt: payload.appliedAt,
-    },
-    () => {
-      if (chrome.runtime.lastError) {
-        getApplicationEndpoints()
-          .then((endpoints) => {
-            const tryPost = (index) => {
-              const url = endpoints[index];
-              if (!url) {
-                return Promise.reject(new Error("no application endpoints"));
-              }
-              return fetch(url, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload),
-              }).then((response) => {
-                if (response.ok) {
-                  return response;
-                }
-                if (index + 1 < endpoints.length) {
-                  return tryPost(index + 1);
-                }
-                throw new Error(`HTTP ${response.status}`);
-              });
-            };
-            return tryPost(0);
-          })
-          .catch((err) => {
+  if (!isExtensionContextValid()) {
+    postApplicationDirect(payload).catch((err) => {
+      console.warn("[ResumeSnap] Easy Apply POST failed:", err);
+    });
+    return;
+  }
+  try {
+    chrome.runtime.sendMessage(
+      {
+        type: "EASY_APPLY_DETECTED",
+        jobId: payload.jobId,
+        sourceUrl: payload.sourceUrl,
+        appliedAt: payload.appliedAt,
+      },
+      () => {
+        if (chrome.runtime.lastError) {
+          postApplicationDirect(payload).catch((err) => {
             console.warn("[ResumeSnap] Easy Apply POST failed:", err);
           });
-      }
-    },
-  );
+        }
+      },
+    );
+  } catch {
+    postApplicationDirect(payload).catch((err) => {
+      console.warn("[ResumeSnap] Easy Apply POST failed:", err);
+    });
+  }
   console.log("[ResumeSnap] Easy Apply likely submitted", payload.jobId);
 }
 
