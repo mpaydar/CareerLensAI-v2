@@ -1,0 +1,15 @@
+# Google Cloud Buildpacks (repo root) — FastAPI lives in llm_layer/
+[_]
+schema-version = "v0.1"
+
+[[build.env]]
+name = "GOOGLE_PYTHON_VERSION"
+value = "3.11"
+
+[[build.env]]
+name = "GOOGLE_PYTHON_PACKAGE_MANAGER"
+value = "pip"
+
+[[build.env]]
+name = "GOOGLE_ENTRYPOINT"
+value = "sh -c 'export PYTHONPATH=llm_layer && exec uvicorn app.main:app --host 0.0.0.0 --port $PORT'"

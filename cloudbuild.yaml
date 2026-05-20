@@ -1,0 +1,15 @@
+# Optional: use if the Cloud Run trigger is configured to run this file.
+# Builds only llm_layer via buildpacks (preferred over repo-root shim).
+steps:
+  - name: gcr.io/k8s-skaffold/pack
+    entrypoint: pack
+    args:
+      - build
+      - $_IMAGE_NAME
+      - --builder=gcr.io/buildpacks/builder:latest
+      - --path=llm_layer
+      - --env=GOOGLE_PYTHON_VERSION=3.11
+      - --env=GOOGLE_PYTHON_PACKAGE_MANAGER=pip
+      - --env=GOOGLE_ENTRYPOINT=uvicorn app.main:app --host 0.0.0.0 --port $$PORT
+images:
+  - $_IMAGE_NAME

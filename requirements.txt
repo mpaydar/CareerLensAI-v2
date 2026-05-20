@@ -1,0 +1,2 @@
+# Cloud Run buildpack install list (repo root). Slim stack — no Whisper/torch.
+-r llm_layer/requirements-azure.txt

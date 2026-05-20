@@ -1,0 +1,16 @@
+# Google Cloud Buildpacks — https://cloud.google.com/docs/buildpacks/python
+[_]
+schema-version = "v0.1"
+
+[[build.env]]
+name = "GOOGLE_PYTHON_VERSION"
+value = "3.11"
+
+# Use pip on 3.11 (avoid uv default on 3.14.x during mis-detected builds).
+[[build.env]]
+name = "GOOGLE_PYTHON_PACKAGE_MANAGER"
+value = "pip"
+
+[[build.env]]
+name = "GOOGLE_ENTRYPOINT"
+value = "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
