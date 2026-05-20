@@ -7,6 +7,7 @@ import {
   llmLayerInterviewPlan,
   llmLayerTranscribe,
 } from "@/lib/llm-layer-client";
+import { isAzureSpeechConfigured, transcribeWithAzureSpeech } from "@/lib/azure-speech";
 import {
   canSpawnLocalPython,
   getPythonCommand,
@@ -17,11 +18,34 @@ import {
 function requireLlmLayerMessage(): string {
   if (process.env.VERCEL) {
     return [
-      "Interview prep and Whisper run on the LLM layer (Railway), not in the browser.",
-      "Set LLM_LAYER_URL and LLM_LAYER_SECRET on Vercel, then redeploy.",
+      "Interview questions use the LLM layer (Azure/Railway). Voice uses Azure Speech or the LLM layer.",
+      "Set LLM_LAYER_URL + LLM_LAYER_SECRET for gap/questions, and AZURE_SPEECH_KEY + AZURE_SPEECH_REGION for voice.",
     ].join(" ");
   }
   return llmLayerSetupHint();
+}
+
+function requireTranscribeMessage(): string {
+  if (isAzureSpeechConfigured()) {
+    return "";
+  }
+  if (getLlmLayerUrl()) {
+    return "";
+  }
+  if (canSpawnLocalPython()) {
+    return "";
+  }
+  if (process.env.VERCEL) {
+    return [
+      "Voice transcription is not configured.",
+      "Add AZURE_SPEECH_KEY and AZURE_SPEECH_REGION on Vercel (Azure portal → Speech resource → Keys and endpoint),",
+      "or set LLM_LAYER_URL to a host with Whisper (Railway/Docker).",
+    ].join(" ");
+  }
+  return [
+    llmLayerSetupHint(),
+    "Or add AZURE_SPEECH_KEY and AZURE_SPEECH_REGION to frontend/.env.local for Azure Speech.",
+  ].join(" ");
 }
 
 function runPythonScript(
@@ -99,12 +123,16 @@ export async function generateInterviewPlan(
   throw new Error(requireLlmLayerMessage());
 }
 
-/** Whisper transcription via Railway LLM layer (requires ffmpeg on the server). */
+/** Voice → text: Azure Speech (preferred on Vercel), else LLM layer Whisper, else local Python. */
 export async function transcribeAudioBuffer(
   buffer: Buffer,
   filename: string,
   model = "base",
 ): Promise<string> {
+  if (isAzureSpeechConfigured()) {
+    return transcribeWithAzureSpeech(buffer, filename);
+  }
+
   if (getLlmLayerUrl()) {
     return llmLayerTranscribe(
       buffer,
@@ -130,7 +158,8 @@ export async function transcribeAudioBuffer(
     }
   }
 
-  throw new Error(requireLlmLayerMessage());
+  const hint = requireTranscribeMessage();
+  throw new Error(hint || "Transcription is not configured.");
 }
 
 export async function transcribeAudioFile(

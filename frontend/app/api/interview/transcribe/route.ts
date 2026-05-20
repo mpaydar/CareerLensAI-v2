@@ -32,7 +32,7 @@ export async function POST(request: Request) {
     let message = e instanceof Error ? e.message : "transcription failed";
     if (/ffmpeg/i.test(message) && /no such file/i.test(message)) {
       message =
-        "Whisper on Railway needs ffmpeg. Redeploy the llm_layer service after confirming /health shows ffmpeg installed.";
+        "Whisper on the LLM layer needs ffmpeg. Use Azure Speech (AZURE_SPEECH_KEY + AZURE_SPEECH_REGION on Vercel) or deploy llm_layer with Docker.";
     }
     return NextResponse.json({ error: message }, { status: 500 });
   }

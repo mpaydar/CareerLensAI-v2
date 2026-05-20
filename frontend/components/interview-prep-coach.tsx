@@ -188,7 +188,7 @@ export function InterviewPrepCoach({ gapSkills }: InterviewPrepCoachProps) {
       setLivePreview("");
     } catch (e) {
       setRecordError(
-        e instanceof Error ? e.message : "Whisper transcription failed",
+        e instanceof Error ? e.message : "Speech transcription failed",
       );
     } finally {
       setIsTranscribing(false);
@@ -320,7 +320,7 @@ export function InterviewPrepCoach({ gapSkills }: InterviewPrepCoachProps) {
           <span className="text-violet-300">
             Voice answers earn more points
           </span>{" "}
-          (Whisper transcription).
+          (Azure Speech transcription).
         </p>
       </div>
 
@@ -413,7 +413,7 @@ export function InterviewPrepCoach({ gapSkills }: InterviewPrepCoachProps) {
                     {isRecording
                       ? "Listening… release Stop when finished"
                       : isTranscribing
-                        ? "Transcribing with Whisper…"
+                        ? "Transcribing your answer…"
                         : "Tap Speak and answer out loud"}
                   </p>
                 </div>
