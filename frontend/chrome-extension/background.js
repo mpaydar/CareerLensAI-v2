@@ -18,7 +18,7 @@ chrome.runtime.onInstalled.addListener((details) => {
   });
 });
 
-function postJson(payload, endpoints, index = 0) {
+function postJson(payload, endpoints, headers, index = 0) {
   const url = endpoints[index];
   if (!url) {
     return Promise.reject(new Error("all endpoints failed"));
@@ -26,7 +26,7 @@ function postJson(payload, endpoints, index = 0) {
 
   return fetch(url, {
     method: "POST",
-    headers: EXTENSION_FETCH_HEADERS,
+    headers,
     credentials: "omit",
     body: JSON.stringify(payload),
   }).then(async (response) => {
@@ -34,12 +34,17 @@ function postJson(payload, endpoints, index = 0) {
       console.log("[ResumeSnap] saved to", url);
       if (url.includes("/api/highlight")) {
         rememberSuccessfulHighlightEndpoint(url);
+        clearHighlightError();
       }
       return response;
     }
     const detail = await response.text();
-    console.warn("[ResumeSnap] POST", url, response.status, detail);
-    throw Object.assign(new Error(detail || `HTTP ${response.status}`), {
+    const message = describeHighlightPostFailure(response.status, detail, url);
+    if (url.includes("/api/highlight")) {
+      rememberHighlightError(message);
+    }
+    console.warn("[ResumeSnap] POST", url, response.status, message);
+    throw Object.assign(new Error(message), {
       __httpError: true,
     });
   }).catch((error) => {
@@ -50,7 +55,7 @@ function postJson(payload, endpoints, index = 0) {
     if (index + 1 >= endpoints.length) {
       throw error;
     }
-    return postJson(payload, endpoints, index + 1);
+    return postJson(payload, endpoints, headers, index + 1);
   });
 }
 
@@ -89,8 +94,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       appliedAt: message.appliedAt || new Date().toISOString(),
     };
 
-    void getApplicationEndpoints()
-      .then((endpoints) => postJson(payload, endpoints))
+    void getExtensionFetchConfig()
+      .then(({ headers }) =>
+        getApplicationEndpoints().then((endpoints) =>
+          postJson(payload, endpoints, headers),
+        ),
+      )
       .catch((error) => {
         console.warn("[ResumeSnap] application POST failed:", error);
       });
@@ -105,8 +114,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     };
 
     // Fetch from the service worker (not the content script) to bypass page CSP.
-    void getHighlightEndpoints()
-      .then((endpoints) => postJson(payload, endpoints))
+    void getExtensionFetchConfig()
+      .then(({ headers, endpoints }) => postJson(payload, endpoints, headers))
       .catch((error) => {
         console.warn("[ResumeSnap] highlight POST failed:", error);
       });

@@ -17,12 +17,21 @@ function authHeaders(): Record<string, string> {
 }
 
 function isHtmlErrorPayload(text: string): boolean {
-  const sample = text.trim().slice(0, 200).toLowerCase();
+  const sample = text.trim().slice(0, 400).toLowerCase();
   return (
     sample.startsWith("<!doctype html") ||
     sample.startsWith("<html") ||
     sample.includes("application error") ||
     sample.includes("<head>")
+  );
+}
+
+function isCloudRunPlaceholderPage(text: string): boolean {
+  const sample = text.toLowerCase();
+  return (
+    sample.includes("placeholder | cloud run") ||
+    sample.includes("cloud run</title>") ||
+    (sample.includes("cloud run") && sample.includes("placeholder"))
   );
 }
 
@@ -32,11 +41,25 @@ function friendlyLlmLayerError(
   base: string,
 ): string {
   if (isHtmlErrorPayload(raw)) {
+    if (isCloudRunPlaceholderPage(raw)) {
+      return [
+        `LLM layer at ${base} is still the default Cloud Run placeholder, not your FastAPI app.`,
+        "Redeploy from the llm_layer folder (buildpack or Dockerfile), source directory llm_layer — not the sample container.",
+        `Then open ${base}/health — you should see JSON with "spacy":"ok", not an HTML page.`,
+      ].join(" ");
+    }
+    if (base.includes("azurewebsites.net")) {
+      return [
+        `LLM layer at ${base} returned an HTML error page (HTTP ${status}), not JSON.`,
+        "The Azure App Service app is likely stopped or misconfigured.",
+        `Open ${base}/health — you should see JSON with "spacy":"ok".`,
+        "Azure → snapResume → Startup Command: bash startup.sh, then Restart.",
+      ].join(" ");
+    }
     return [
-      `LLM layer at ${base} returned an HTML error page (HTTP ${status}), not JSON.`,
-      "The Azure App Service app is likely stopped or misconfigured.",
-      `Open ${base}/health in a browser — you should see JSON with "spacy":"ok".`,
-      "In Azure → snapResume → Configuration → Startup Command: bash startup.sh, then Restart.",
+      `LLM layer at ${base} returned an HTML page (HTTP ${status}), not JSON.`,
+      `Open ${base}/health — you should see JSON with "spacy":"ok".`,
+      "Check Cloud Run logs: the container may have crashed or the wrong image was deployed.",
     ].join(" ");
   }
 

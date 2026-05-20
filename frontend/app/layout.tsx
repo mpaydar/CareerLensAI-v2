@@ -17,9 +17,10 @@ export const metadata: Metadata = {
   description: "Capture job highlights and upload your resume.",
 };
 
-const siteOrigin =
-  process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
-  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "");
+// Prefer this deployment's host so preview builds don't advertise production in meta.
+const siteOrigin = process.env.VERCEL_URL
+  ? `https://${process.env.VERCEL_URL}`
+  : process.env.NEXT_PUBLIC_SITE_URL?.trim() || "";
 
 export default function RootLayout({
   children,

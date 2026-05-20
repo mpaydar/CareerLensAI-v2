@@ -1,6 +1,8 @@
 // Shared endpoint resolver for content script and service worker.
 const API_BASE_STORAGE_KEY = "apiBaseUrl";
 const LAST_OK_HIGHLIGHT_KEY = "lastOkHighlightEndpoint";
+const PROTECTION_BYPASS_KEY = "protectionBypassSecret";
+const LAST_HIGHLIGHT_ERROR_KEY = "lastHighlightError";
 
 function isExtensionContextValid() {
   try {
@@ -43,7 +45,8 @@ function syncApiBaseFromAppPage() {
 
   const metaOrigin = readMetaApiOrigin();
   const origin = window.location.origin;
-  const targetOrigin = metaOrigin || origin;
+  // Tab you have open wins — meta can point at production while you're on a preview URL.
+  const targetOrigin = origin || metaOrigin;
   const pattern = `${targetOrigin}/*`;
 
   const saveOrigin = (value) => {
@@ -96,10 +99,19 @@ function normalizeApiOrigin(raw) {
   }
 }
 
-const EXTENSION_FETCH_HEADERS = {
-  "Content-Type": "application/json",
-  "X-ResumeSnap-Source": "extension",
-};
+function extensionFetchHeaders(bypassSecret) {
+  const headers = {
+    "Content-Type": "application/json",
+    "X-ResumeSnap-Source": "extension",
+  };
+  const secret = (bypassSecret || "").trim();
+  if (secret) {
+    headers["x-vercel-protection-bypass"] = secret;
+  }
+  return headers;
+}
+
+const EXTENSION_FETCH_HEADERS = extensionFetchHeaders();
 
 function uniqueEndpoints(urls) {
   const seen = new Set();
@@ -114,33 +126,107 @@ function uniqueEndpoints(urls) {
   return out;
 }
 
-function getHighlightEndpoints() {
+function getExtensionFetchConfig() {
   return new Promise((resolve) => {
-    const fallback = [...DEFAULT_HIGHLIGHT_ENDPOINTS];
     if (!isExtensionContextValid()) {
-      resolve(fallback);
+      resolve({ headers: extensionFetchHeaders(), endpoints: [...DEFAULT_HIGHLIGHT_ENDPOINTS] });
       return;
     }
     try {
       chrome.storage.local.get(
-        [API_BASE_STORAGE_KEY, LAST_OK_HIGHLIGHT_KEY],
+        [API_BASE_STORAGE_KEY, LAST_OK_HIGHLIGHT_KEY, PROTECTION_BYPASS_KEY],
         (result) => {
-          const ordered = [];
-          const lastOk = (result[LAST_OK_HIGHLIGHT_KEY] || "").trim();
-          const origin = normalizeApiOrigin(result[API_BASE_STORAGE_KEY]);
-          if (lastOk) {
-            ordered.push(lastOk);
-          }
-          if (origin) {
-            ordered.push(`${origin}/api/highlight`);
-          }
-          resolve(uniqueEndpoints([...ordered, ...fallback]));
+          const bypass = (result[PROTECTION_BYPASS_KEY] || "").trim();
+          getHighlightEndpointsWithStorage(result).then((endpoints) => {
+            resolve({ headers: extensionFetchHeaders(bypass), endpoints });
+          });
         },
       );
     } catch {
-      resolve(fallback);
+      resolve({ headers: extensionFetchHeaders(), endpoints: [...DEFAULT_HIGHLIGHT_ENDPOINTS] });
     }
   });
+}
+
+function getHighlightEndpointsWithStorage(result) {
+  return new Promise((resolve) => {
+    const fallback = [...DEFAULT_HIGHLIGHT_ENDPOINTS];
+    const ordered = [];
+    const lastOk = (result[LAST_OK_HIGHLIGHT_KEY] || "").trim();
+    const origin = normalizeApiOrigin(result[API_BASE_STORAGE_KEY]);
+    if (lastOk) {
+      ordered.push(lastOk);
+    }
+    if (origin) {
+      ordered.push(`${origin}/api/highlight`);
+    }
+    resolve(uniqueEndpoints([...ordered, ...fallback]));
+  });
+}
+
+function getHighlightEndpoints() {
+  if (!isExtensionContextValid()) {
+    return Promise.resolve([...DEFAULT_HIGHLIGHT_ENDPOINTS]);
+  }
+  return new Promise((resolve) => {
+    try {
+      chrome.storage.local.get(
+        [API_BASE_STORAGE_KEY, LAST_OK_HIGHLIGHT_KEY],
+        (result) => {
+          getHighlightEndpointsWithStorage(result).then(resolve);
+        },
+      );
+    } catch {
+      resolve([...DEFAULT_HIGHLIGHT_ENDPOINTS]);
+    }
+  });
+}
+
+function describeHighlightPostFailure(status, detail, url) {
+  const body = (detail || "").slice(0, 400);
+  if (
+    status === 401 ||
+    /authentication required|vercel authentication/i.test(body)
+  ) {
+    return (
+      `Blocked by Vercel login on ${url}. Use your production URL in extension options, ` +
+      "disable Deployment Protection for previews, or add a Protection Bypass secret in options."
+    );
+  }
+  if (status === 503 && /redis|upstash/i.test(body)) {
+    return `Server needs Upstash Redis on Vercel (${url}). Add Redis in the project, redeploy, then try again.`;
+  }
+  if (status === 403) {
+    return `Permission denied posting to ${url}. Open extension options and allow host access.`;
+  }
+  return `Highlight POST failed (${status}) for ${url}`;
+}
+
+function rememberHighlightError(message) {
+  if (!isExtensionContextValid()) {
+    return;
+  }
+  try {
+    chrome.storage.local.set({
+      [LAST_HIGHLIGHT_ERROR_KEY]: {
+        message,
+        at: new Date().toISOString(),
+      },
+    });
+  } catch {
+    // ignore
+  }
+}
+
+function clearHighlightError() {
+  if (!isExtensionContextValid()) {
+    return;
+  }
+  try {
+    chrome.storage.local.remove(LAST_HIGHLIGHT_ERROR_KEY);
+  } catch {
+    // ignore
+  }
 }
 
 function rememberSuccessfulHighlightEndpoint(url) {

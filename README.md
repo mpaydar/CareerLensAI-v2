@@ -7,7 +7,7 @@ Monorepo for ResumeSnap / CareerLens:
 | Folder | Deploy to | Purpose |
 |--------|-----------|---------|
 | [`frontend/`](frontend/) | **Vercel** | Next.js app, accounts, Redis, **Gemini** (resume bullets / projects only) |
-| [`llm_layer/`](llm_layer/) | **Railway** | **SpaCy** gap analysis + context fit, optimize context, interview prep, Whisper |
+| [`llm_layer/`](llm_layer/) | **Cloud Run** (buildpacks/Docker), **Railway**, Azure | **SpaCy** gap analysis + context fit, optimize context, interview prep, Whisper |
 | [`frontend/chrome-extension/`](frontend/chrome-extension/) | Chrome | Job-description highlighting |
 
 ## Quick start (local)
@@ -49,6 +49,13 @@ Load unpacked from `frontend/chrome-extension/` in `chrome://extensions`.
 
 - **Root directory:** `frontend`
 - Env: `GEMINI_API_KEY`, Upstash Redis, `LLM_LAYER_URL`, `LLM_LAYER_SECRET`, `NEXT_PUBLIC_UPGRADE_URL`
+
+### Cloud Run (buildpacks)
+
+- **Preferred source directory:** `llm_layer`
+- **GitHub → Cloud Run (repo root):** repo root includes `main.py`, `Procfile`, `requirements.txt`, `.python-version` that delegate to `llm_layer/` — **commit and push** (no `project.toml`; pack rejects it)
+- Env: `LLM_LAYER_SECRET` (same as Vercel); set Vercel `LLM_LAYER_URL` to the Cloud Run service URL
+- After deploy, `curl $LLM_LAYER_URL/health` must return JSON, not “Placeholder | Cloud Run” HTML
 
 ### Railway
 

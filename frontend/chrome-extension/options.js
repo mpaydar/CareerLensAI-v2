@@ -1,6 +1,8 @@
 const API_BASE_STORAGE_KEY = "apiBaseUrl";
+const PROTECTION_BYPASS_KEY = "protectionBypassSecret";
 
 const apiBaseInput = document.getElementById("apiBase");
+const protectionBypassInput = document.getElementById("protectionBypass");
 const saveButton = document.getElementById("save");
 const statusEl = document.getElementById("status");
 
@@ -17,9 +19,12 @@ function normalizeApiOrigin(raw) {
   }
 }
 
-chrome.storage.local.get([API_BASE_STORAGE_KEY], (result) => {
+chrome.storage.local.get([API_BASE_STORAGE_KEY, PROTECTION_BYPASS_KEY], (result) => {
   if (result[API_BASE_STORAGE_KEY]) {
     apiBaseInput.value = result[API_BASE_STORAGE_KEY];
+  }
+  if (result[PROTECTION_BYPASS_KEY]) {
+    protectionBypassInput.value = result[PROTECTION_BYPASS_KEY];
   }
 });
 
@@ -41,6 +46,12 @@ saveButton.addEventListener("click", async () => {
     }
   }
 
-  await chrome.storage.local.set({ [API_BASE_STORAGE_KEY]: origin });
-  statusEl.textContent = `Saved. Highlights will post to ${origin}/api/highlight`;
+  const bypass = (protectionBypassInput.value || "").trim();
+  await chrome.storage.local.set({
+    [API_BASE_STORAGE_KEY]: origin,
+    [PROTECTION_BYPASS_KEY]: bypass,
+  });
+  statusEl.textContent = bypass
+    ? `Saved. Highlights will post to ${origin}/api/highlight (preview bypass enabled).`
+    : `Saved. Highlights will post to ${origin}/api/highlight`;
 });

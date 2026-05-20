@@ -46,8 +46,12 @@ Legacy Vercel KV projects may still use `KV_REST_API_URL` / `KV_REST_API_TOKEN`;
 
 1. Reload the extension at `chrome://extensions`.
 2. Open **ResumeSnap → Extension options** (or right-click the extension → Options).
-3. Enter your Vercel URL, e.g. `https://career-lens-ai.vercel.app`, and click **Save**.
+3. Enter your **production** Vercel URL (e.g. `https://career-lens-ai.vercel.app`), not a preview URL, and click **Save**.
 4. Approve host permission when Chrome prompts.
+
+Opening the dashboard tab also syncs the API base to that tab’s origin automatically.
+
+**Preview deployments (`*-projects.vercel.app`)** often have [Vercel Deployment Protection](https://vercel.com/docs/security/deployment-protection). The extension cannot send highlights through the login wall unless you disable protection for previews, use production, or paste a **Protection Bypass** secret in extension options (Vercel → Project → Settings → Deployment Protection).
 
 ### 3. Test
 
@@ -55,7 +59,7 @@ Legacy Vercel KV projects may still use `KV_REST_API_URL` / `KV_REST_API_TOKEN`;
 2. On LinkedIn (or any site), highlight job description text.
 3. The highlight box on your Vercel app should update within a few seconds.
 
-If it still fails, check the extension service worker console (`chrome://extensions` → ResumeSnap → **Service worker**) for `[ResumeSnap] live view POST` errors.
+If it still fails, check the extension popup or service worker console (`chrome://extensions` → ResumeSnap → **Service worker**) for `[ResumeSnap] POST` errors (401 = deployment protection, 503 = missing Redis).
 
 ## Accounts & free tier
 

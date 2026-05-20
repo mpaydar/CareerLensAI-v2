@@ -31,10 +31,10 @@ const ANALYZE_SCRIPT = path.join(SKILLS_SERVICE_DIR, "analyze.py");
 function requireLlmLayerMessage(): string {
   if (process.env.VERCEL) {
     return [
-      "Skills gap uses SpaCy on the LLM layer (Azure snapResume or Railway), not Gemini.",
+      "Skills gap uses SpaCy on the LLM layer (Cloud Run / Railway), not Gemini.",
       "Vercel → Environment Variables:",
-      "  LLM_LAYER_URL = https://snapresume-….azurewebsites.net (no trailing slash)",
-      "  LLM_LAYER_SECRET = same as Azure App Service",
+      "  LLM_LAYER_URL = https://your-service-….run.app (no trailing slash)",
+      "  LLM_LAYER_SECRET = same as Cloud Run",
       "Verify: open LLM_LAYER_URL/health → JSON with \"spacy\":\"ok\".",
     ].join(" ");
   }

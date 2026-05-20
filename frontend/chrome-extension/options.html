@@ -53,6 +53,21 @@
       placeholder="https://your-app.vercel.app"
       autocomplete="url"
     />
+    <label for="protectionBypass" style="margin-top: 20px"
+      >Vercel preview bypass (optional)</label
+    >
+    <input
+      id="protectionBypass"
+      type="password"
+      placeholder="Protection Bypass secret from Vercel project settings"
+      autocomplete="off"
+    />
+    <p>
+      Only needed for <strong>password-protected preview</strong> deployments.
+      Prefer your public production URL instead. In Vercel → Project → Settings
+      → Deployment Protection, copy the bypass secret if you must use a preview
+      URL.
+    </p>
     <button type="button" id="save">Save</button>
     <p id="status"></p>
     <script src="options.js"></script>

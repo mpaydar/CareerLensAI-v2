@@ -87,7 +87,7 @@ export async function POST(request: Request) {
     let message = e instanceof Error ? e.message : "analysis failed";
     if (/<html[\s>]/i.test(message) || /<!DOCTYPE/i.test(message)) {
       message =
-        "LLM layer returned an HTML error page. Check Azure snapResume is running (visit /health), set Startup Command to bash startup.sh, and restart the app.";
+        "LLM layer returned an HTML page (not JSON). Open LLM_LAYER_URL/health — expect JSON with spacy ok. On Cloud Run, redeploy from llm_layer (not the placeholder image).";
     }
     if (message === "UNAUTHORIZED") {
       return NextResponse.json({ error: "Sign in required" }, { status: 401 });
