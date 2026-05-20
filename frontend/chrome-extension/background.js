@@ -86,12 +86,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       appliedAt: message.appliedAt || new Date().toISOString(),
     };
 
-    getApplicationEndpoints()
+    void getApplicationEndpoints()
       .then((endpoints) => postJson(payload, endpoints))
       .catch((error) => {
         console.warn("[ResumeSnap] application POST failed:", error);
       });
-    return;
+    sendResponse({ ok: true });
+    return false;
   }
 
   if (message.type === "HIGHLIGHT_CAPTURED") {
@@ -101,12 +102,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     };
 
     // Fetch from the service worker (not the content script) to bypass page CSP.
-    getHighlightEndpoints()
+    void getHighlightEndpoints()
       .then((endpoints) => postJson(payload, endpoints))
       .catch((error) => {
         console.warn("[ResumeSnap] highlight POST failed:", error);
       });
-    return;
+    sendResponse({ ok: true });
+    return false;
   }
 });
 

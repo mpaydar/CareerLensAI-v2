@@ -102,21 +102,20 @@ function requestPageWorldBridge() {
 
 /** Relay highlight to the service worker (bypasses LinkedIn page CSP on fetch). */
 function sendHighlightToBackground(selectedText, sourceUrl) {
-  chrome.runtime.sendMessage(
-    {
-      type: "HIGHLIGHT_CAPTURED",
-      text: selectedText,
-      sourceUrl,
-    },
-    () => {
-      if (chrome.runtime.lastError) {
-        console.warn(
-          "[ResumeSnap] background relay failed:",
-          chrome.runtime.lastError.message,
-        );
-      }
-    },
-  );
+  const message = {
+    type: "HIGHLIGHT_CAPTURED",
+    text: selectedText,
+    sourceUrl,
+  };
+  if (typeof chrome.runtime.sendMessage !== "function") {
+    return;
+  }
+  const sent = chrome.runtime.sendMessage(message);
+  if (sent && typeof sent.catch === "function") {
+    sent.catch((err) => {
+      console.warn("[ResumeSnap] background relay failed:", err?.message || err);
+    });
+  }
 }
 
 function deliverHighlight(text, sourceUrl) {
@@ -238,19 +237,17 @@ function reportEasyApply(payload) {
     return;
   }
   try {
-    chrome.runtime.sendMessage(
-      {
-        type: "EASY_APPLY_DETECTED",
-        jobId: payload.jobId,
-        sourceUrl: payload.sourceUrl,
-        appliedAt: payload.appliedAt,
-      },
-      () => {
-        if (chrome.runtime.lastError) {
-          console.warn("[ResumeSnap] Easy Apply relay failed:", chrome.runtime.lastError.message);
-        }
-      },
-    );
+    const sent = chrome.runtime.sendMessage({
+      type: "EASY_APPLY_DETECTED",
+      jobId: payload.jobId,
+      sourceUrl: payload.sourceUrl,
+      appliedAt: payload.appliedAt,
+    });
+    if (sent && typeof sent.catch === "function") {
+      sent.catch((err) => {
+        console.warn("[ResumeSnap] Easy Apply relay failed:", err?.message || err);
+      });
+    }
   } catch {
     console.warn("[ResumeSnap] Easy Apply skipped — extension context invalid.");
   }
