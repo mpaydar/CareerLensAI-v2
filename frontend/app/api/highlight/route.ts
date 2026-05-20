@@ -3,6 +3,7 @@ import {
   appendHighlightChunk,
   clearHighlightState,
   GLOBAL_HIGHLIGHT_SCOPE,
+  highlightStorageBackend,
 } from "@/lib/highlight-store";
 import { getHighlightForSession, getHighlightScopeId } from "@/lib/highlight-scope";
 import { getAuthenticatedUser } from "@/lib/auth";
@@ -24,9 +25,15 @@ function isExtensionRequest(request: Request): boolean {
 
 export async function GET() {
   const state = await getHighlightForSession();
-  return NextResponse.json(state, {
-    headers: { ...CORS_HEADERS, ...NO_CACHE_HEADERS },
-  });
+  return NextResponse.json(
+    {
+      ...state,
+      storage: highlightStorageBackend(),
+    },
+    {
+      headers: { ...CORS_HEADERS, ...NO_CACHE_HEADERS },
+    },
+  );
 }
 
 export async function POST(request: Request) {

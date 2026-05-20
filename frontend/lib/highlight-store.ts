@@ -192,3 +192,15 @@ export async function clearHighlightState(
 ): Promise<HighlightState> {
   return writeState(scopeId, { ...defaultState });
 }
+
+/** Replace scope state (used to mirror extension global highlight for logged-in users). */
+export async function replaceHighlightState(
+  scopeId: string,
+  state: HighlightState,
+): Promise<HighlightState> {
+  return writeState(scopeId, state);
+}
+
+export function highlightStorageBackend(): "redis" | "file" {
+  return getRedis() ? "redis" : "file";
+}

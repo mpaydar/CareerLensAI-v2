@@ -15,6 +15,7 @@ type HighlightResponse = {
   sourceUrl: string;
   jobId: string;
   updatedAt: string;
+  storage?: "redis" | "file";
 };
 
 function formatFileSize(bytes: number): string {
@@ -44,6 +45,9 @@ function HomeApp() {
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isOnline, setIsOnline] = useState(true);
+  const [highlightStorage, setHighlightStorage] = useState<
+    "redis" | "file" | null
+  >(null);
   const [gapAnalysis, setGapAnalysis] = useState<StoredGapAnalysis | null>(null);
   const [gapAnalyzing, setGapAnalyzing] = useState(false);
   const [gapError, setGapError] = useState<string | null>(null);
@@ -78,6 +82,7 @@ function HomeApp() {
             }
             return data;
           });
+          setHighlightStorage(data.storage ?? null);
           setIsOnline(true);
           if (!data.text.trim()) {
             setGapAnalysis(null);
@@ -324,10 +329,16 @@ function HomeApp() {
       return "Cannot reach highlight API — check extension URL and Redis on Vercel";
     }
     if (!highlight.text) {
-      return "Waiting for highlighted text...";
+      if (highlightStorage === "file" && typeof window !== "undefined") {
+        const onVercel = /vercel\.app$/i.test(window.location.hostname);
+        if (onVercel) {
+          return "Highlights need Upstash Redis on Vercel — extension cannot sync to this app yet";
+        }
+      }
+      return "Waiting for highlighted text… (open this tab once + set extension API URL)";
     }
     return "Live updates active";
-  }, [highlight.text, isOnline]);
+  }, [highlight.text, isOnline, highlightStorage]);
 
   if (loading) {
     return (
@@ -380,8 +391,18 @@ function HomeApp() {
           </pre>
           <p className="mt-3 text-xs text-zinc-600">
             Select job description text on LinkedIn (extension) or on this page.
-            Same job appends with a separator; a new job replaces the box.
+            Same job appends with a separator; a new job replaces the box. The
+            extension popup shows local capture; this box shows what reached the
+            server — check the service worker console for{" "}
+            <span className="text-zinc-500">[ResumeSnap] saved to …</span>.
           </p>
+          {!highlight.text ? (
+            <p className="mt-2 text-xs text-amber-600/90">
+              Not syncing? Open this dashboard tab once, set your Vercel URL in
+              extension Options, reload the extension, refresh LinkedIn, then
+              highlight again.
+            </p>
+          ) : null}
           <div className="mt-4 text-xs text-zinc-500">
             {highlight.updatedAt
               ? `Updated: ${new Date(highlight.updatedAt).toLocaleTimeString()}`

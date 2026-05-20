@@ -32,6 +32,9 @@ function postJson(payload, endpoints, index = 0) {
   }).then(async (response) => {
     if (response.ok) {
       console.log("[ResumeSnap] saved to", url);
+      if (url.includes("/api/highlight")) {
+        rememberSuccessfulHighlightEndpoint(url);
+      }
       return response;
     }
     const detail = await response.text();

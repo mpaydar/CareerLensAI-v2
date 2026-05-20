@@ -17,6 +17,10 @@ export const metadata: Metadata = {
   description: "Capture job highlights and upload your resume.",
 };
 
+const siteOrigin =
+  process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
+  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "");
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -30,6 +34,9 @@ export default function RootLayout({
     >
       <head>
         <meta name="resumesnap-app" content="1" />
+        {siteOrigin ? (
+          <meta name="resumesnap-api-origin" content={siteOrigin} />
+        ) : null}
       </head>
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
