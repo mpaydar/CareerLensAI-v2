@@ -184,9 +184,12 @@ function HomeApp() {
         }
         const data = (await response.json()) as {
           analysis: StoredGapAnalysis | null;
+          highlightPreview?: string;
         };
         if (!cancelled) {
-          setGapAnalysis(data.analysis);
+          setGapAnalysis(
+            data.highlightPreview?.trim() ? data.analysis : null,
+          );
         }
       } catch {
         // ignore
@@ -504,7 +507,7 @@ function HomeApp() {
         </section>
 
         <SkillGapDashboard
-          analysis={gapAnalysis}
+          analysis={highlight.text.trim() ? gapAnalysis : null}
           analyzing={gapAnalyzing}
           error={gapError}
           ready={gapReady}
@@ -512,7 +515,11 @@ function HomeApp() {
           onAnalyze={(jd) => void runGapAnalysis(jd)}
         />
 
-        <InterviewPrepCoach gapSkills={gapAnalysis?.missing ?? []} />
+        <InterviewPrepCoach
+          gapSkills={
+            highlight.text.trim() ? (gapAnalysis?.missing ?? []) : []
+          }
+        />
 
         <div className="rounded-lg border border-zinc-700 bg-zinc-900 px-4 py-3 text-sm text-indigo-300">
           {statusLabel}

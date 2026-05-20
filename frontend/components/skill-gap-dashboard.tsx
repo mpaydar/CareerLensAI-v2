@@ -381,9 +381,7 @@ export function SkillGapDashboard({
   const [jdDraft, setJdDraft] = useState(highlightText);
 
   useEffect(() => {
-    if (highlightText.trim()) {
-      setJdDraft(highlightText);
-    }
+    setJdDraft(highlightText.trim() ? highlightText : "");
   }, [highlightText]);
 
   const runAnalyze = () => onAnalyze(jdDraft.trim());
@@ -393,29 +391,33 @@ export function SkillGapDashboard({
   } | null>(null);
   const [projectCluster, setProjectCluster] = useState<SkillCluster | null>(null);
 
+  const hasHighlight = highlightText.trim().length > 0;
+  const activeAnalysis = hasHighlight ? analysis : null;
+
   const mismatchTooltips = useMemo(
-    () => buildMismatchTooltips(analysis?.contextMismatchDetails ?? []),
-    [analysis?.contextMismatchDetails],
+    () =>
+      buildMismatchTooltips(activeAnalysis?.contextMismatchDetails ?? []),
+    [activeAnalysis?.contextMismatchDetails],
   );
 
   const missingTooltips = useMemo(() => {
     const map: Record<string, string> = {};
-    for (const item of analysis?.missingInsights ?? []) {
+    for (const item of activeAnalysis?.missingInsights ?? []) {
       map[item.skill] = item.neededFor;
     }
     return map;
-  }, [analysis?.missingInsights]);
+  }, [activeAnalysis?.missingInsights]);
 
   const missingClusters = useMemo(
     () =>
       clusterMissingSkills(
-        analysis?.missing ?? [],
-        analysis?.missingInsights ?? [],
+        activeAnalysis?.missing ?? [],
+        activeAnalysis?.missingInsights ?? [],
       ),
-    [analysis?.missing, analysis?.missingInsights],
+    [activeAnalysis?.missing, activeAnalysis?.missingInsights],
   );
 
-  if (!analysis && !analyzing) {
+  if (!activeAnalysis && !analyzing) {
     return (
       <section className="overflow-hidden rounded-2xl border border-zinc-800 bg-gradient-to-br from-zinc-900 via-zinc-900 to-indigo-950/40 p-6">
         <h2 className="text-sm uppercase tracking-wide text-zinc-400">
@@ -438,13 +440,13 @@ export function SkillGapDashboard({
     );
   }
 
-  const lexicalPercent = analysis?.matchPercent ?? 0;
-  const contextPercent = analysis?.contextMatchPercent ?? 0;
-  const summary = analysis?.summary;
+  const lexicalPercent = activeAnalysis?.matchPercent ?? 0;
+  const contextPercent = activeAnalysis?.contextMatchPercent ?? 0;
+  const summary = activeAnalysis?.summary;
   const noJobSkills =
-    analysis?.noJobSkillsDetected ?? (summary?.jobSkillCount ?? 0) === 0;
+    activeAnalysis?.noJobSkillsDetected ?? (summary?.jobSkillCount ?? 0) === 0;
   const showOverviewWarning = isLikelyCompanyOverview(
-    analysis?.jobDescriptionPreview,
+    activeAnalysis?.jobDescriptionPreview,
   );
 
   return (
@@ -457,8 +459,8 @@ export function SkillGapDashboard({
             </h2>
             <p className="text-xs text-zinc-500">
               SpaCy · keyword match + contextual fit ·{" "}
-              {analysis?.resumeFileName ?? "Resume"}
-              {analysis?.analysisEngine === "python-local"
+              {activeAnalysis?.resumeFileName ?? "Resume"}
+              {activeAnalysis?.analysisEngine === "python-local"
                 ? " · local Python"
                 : ""}
             </p>
@@ -541,20 +543,20 @@ export function SkillGapDashboard({
         <SkillColumn
           title="Context aligned"
           variant="aligned"
-          skills={analysis?.contextAligned ?? []}
+          skills={activeAnalysis?.contextAligned ?? []}
         />
         <SkillColumn
           title="Context mismatch"
           hint="Hover for context · Optimize to reframe the bullet"
           variant="mismatch"
-          skills={analysis?.contextMismatch ?? []}
+          skills={activeAnalysis?.contextMismatch ?? []}
           tooltips={mismatchTooltips}
           tooltipKind="mismatch"
           optimizable
           onOptimize={(skill) => setOptimizing({ skill, mode: "reframe" })}
         />
         <MissingSkillsColumn
-          skills={analysis?.missing ?? []}
+          skills={activeAnalysis?.missing ?? []}
           tooltips={missingTooltips}
           clusters={missingClusters}
           onBuildCluster={setProjectCluster}
@@ -564,16 +566,16 @@ export function SkillGapDashboard({
           variant="extra"
           skills={
             noJobSkills
-              ? (analysis?.resumeSkills ?? [])
-              : (analysis?.extra ?? [])
+              ? (activeAnalysis?.resumeSkills ?? [])
+              : (activeAnalysis?.extra ?? [])
           }
         />
       </div>
 
-      {analysis?.jobDescriptionPreview ? (
+      {activeAnalysis?.jobDescriptionPreview ? (
         <div className="border-t border-zinc-800/80 px-6 py-3 text-xs text-zinc-600">
-          JD preview: {analysis.jobDescriptionPreview}
-          {analysis.jobDescriptionPreview.length >= 280 ? "…" : ""}
+          JD preview: {activeAnalysis.jobDescriptionPreview}
+          {activeAnalysis.jobDescriptionPreview.length >= 280 ? "…" : ""}
         </div>
       ) : null}
 

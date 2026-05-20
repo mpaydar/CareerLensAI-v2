@@ -16,9 +16,12 @@ import {
 export async function GET() {
   try {
     const user = await requireAuthenticatedUser();
-    const analysis = await getStoredGapAnalysis(user.id);
     const resumeMeta = await getResumeMeta(user.id);
     const highlight = await getHighlightForSession();
+    const hasHighlight = highlight.text.trim().length > 0;
+    const analysis = hasHighlight
+      ? await getStoredGapAnalysis(user.id)
+      : null;
 
     return NextResponse.json({
       analysis,
