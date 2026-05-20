@@ -12,6 +12,9 @@ if (typeof syncApiBaseFromAppPage === "function") {
 
 const STORAGE_KEY = "latestHighlightedText";
 
+/** Cached after a successful storage read; avoids chrome.* when context dies. */
+let cachedApiOrigin = "";
+
 let lastPublishedText = "";
 let lastPublishedAt = 0;
 let lastKnownJobId = "";
@@ -46,9 +49,44 @@ function isLinkedInHost() {
 
 function isExtensionContextValid() {
   try {
-    return Boolean(chrome.runtime?.id);
+    return Boolean(chrome.runtime.id);
   } catch {
     return false;
+  }
+}
+
+function showRefreshExtensionBanner() {
+  const id = "resumesnap-refresh-banner";
+  if (document.getElementById(id)) {
+    return;
+  }
+  const bar = document.createElement("div");
+  bar.id = id;
+  bar.setAttribute("role", "alert");
+  bar.textContent =
+    "ResumeSnap: extension was updated — refresh this page (F5), then highlight again.";
+  Object.assign(bar.style, {
+    position: "fixed",
+    bottom: "16px",
+    left: "50%",
+    transform: "translateX(-50%)",
+    zIndex: "2147483647",
+    maxWidth: "92vw",
+    padding: "12px 16px",
+    borderRadius: "8px",
+    background: "#7f1d1d",
+    color: "#fff",
+    font: "600 13px/1.4 system-ui, sans-serif",
+    boxShadow: "0 4px 24px rgba(0,0,0,.35)",
+  });
+  document.documentElement.appendChild(bar);
+}
+
+function rememberApiOrigin(origin) {
+  const normalized =
+    typeof normalizeApiOrigin === "function" ? normalizeApiOrigin(origin) : "";
+  if (normalized) {
+    cachedApiOrigin = normalized;
   }
 }
 
@@ -100,65 +138,86 @@ function postHighlightDirect(text, sourceUrl) {
     });
   };
 
-  return getHighlightEndpoints().then((endpoints) => tryEndpoint(endpoints, 0));
+  const endpoints = [...DEFAULT_HIGHLIGHT_ENDPOINTS];
+  if (cachedApiOrigin) {
+    endpoints.unshift(`${cachedApiOrigin}/api/highlight`);
+  }
+  if (!isExtensionContextValid()) {
+    return Promise.resolve(tryEndpoint(endpoints, 0));
+  }
+  return getHighlightEndpoints()
+    .then((resolved) => {
+      const origin = resolved.find((url) => !/localhost|127\.0\.0\.1/.test(url));
+      if (origin) {
+        rememberApiOrigin(origin.replace(/\/api\/highlight$/, ""));
+      }
+      return tryEndpoint(resolved, 0);
+    })
+    .catch(() => tryEndpoint(endpoints, 0));
 }
 
 function deliverHighlight(text, sourceUrl) {
-  const selectedText = (text || "").trim();
-  const jobId = extractJobIdFromUrl(sourceUrl || window.location.href);
+  try {
+    const selectedText = (text || "").trim();
+    const jobId = extractJobIdFromUrl(sourceUrl || window.location.href);
 
-  if (jobId && lastKnownJobId && jobId !== lastKnownJobId) {
-    resetPublishMemory();
-  }
-  if (jobId) {
-    lastKnownJobId = jobId;
-  }
+    if (jobId && lastKnownJobId && jobId !== lastKnownJobId) {
+      resetPublishMemory();
+    }
+    if (jobId) {
+      lastKnownJobId = jobId;
+    }
 
-  if (!selectedText) {
-    return;
-  }
+    if (!selectedText) {
+      return;
+    }
 
-  if (
-    /ReferenceError|DOMMatrix|Failed to load external module|ENOENT.*python/i.test(
-      selectedText,
-    )
-  ) {
-    return;
-  }
+    if (
+      /ReferenceError|DOMMatrix|Failed to load external module|ENOENT.*python/i.test(
+        selectedText,
+      )
+    ) {
+      return;
+    }
 
-  const now = Date.now();
-  if (selectedText === lastPublishedText && now - lastPublishedAt < 2500) {
-    return;
-  }
+    const now = Date.now();
+    if (selectedText === lastPublishedText && now - lastPublishedAt < 2500) {
+      return;
+    }
 
-  lastPublishedText = selectedText;
-  lastPublishedAt = now;
+    if (!isExtensionContextValid()) {
+      showRefreshExtensionBanner();
+      console.warn(
+        "[ResumeSnap] Extension context invalidated — refresh this tab (F5), then highlight again.",
+      );
+      return;
+    }
 
-  const source = sourceUrl || window.location.href;
-  const publish = () => {
+    lastPublishedText = selectedText;
+    lastPublishedAt = now;
+
+    const source = sourceUrl || window.location.href;
+
+    try {
+      chrome.storage.local.set({ [STORAGE_KEY]: selectedText }, () => void 0);
+    } catch {
+      showRefreshExtensionBanner();
+      return;
+    }
+
     postHighlightDirect(selectedText, source).catch((err) => {
       console.warn("[ResumeSnap] highlight POST failed:", err);
     });
-  };
 
-  if (!isExtensionContextValid()) {
-    console.warn(
-      "[ResumeSnap] Extension was reloaded. Refresh this LinkedIn tab (F5), open your ResumeSnap dashboard once, then highlight again.",
-    );
-    publish();
-    return;
+    console.log("[ResumeSnap] captured:", selectedText.slice(0, 80));
+  } catch (error) {
+    if (/invalidated/i.test(String(error))) {
+      showRefreshExtensionBanner();
+      console.warn("[ResumeSnap] refresh this LinkedIn tab (F5) after updating the extension.");
+      return;
+    }
+    console.warn("[ResumeSnap] deliverHighlight error:", error);
   }
-
-  try {
-    chrome.storage.local.set({ [STORAGE_KEY]: selectedText }, () => void 0);
-  } catch {
-    // Context invalidated between checks.
-  }
-
-  // Post directly from the content script (avoids background message-channel timeouts).
-  publish();
-
-  console.log("[ResumeSnap] captured:", selectedText.slice(0, 80));
 }
 
 function getSelectedText() {
@@ -168,7 +227,13 @@ function getSelectedText() {
 }
 
 function publishSelection() {
-  deliverHighlight(getSelectedText(), window.location.href);
+  try {
+    deliverHighlight(getSelectedText(), window.location.href);
+  } catch (error) {
+    if (/invalidated/i.test(String(error))) {
+      showRefreshExtensionBanner();
+    }
+  }
 }
 
 function schedulePublish() {
@@ -271,6 +336,15 @@ document.addEventListener(
 );
 
 requestPageWorldBridge();
+
+if (isExtensionContextValid() && typeof getHighlightEndpoints === "function") {
+  getHighlightEndpoints().then((endpoints) => {
+    const prod = endpoints.find((url) => !/localhost|127\.0\.0\.1/.test(url));
+    if (prod) {
+      rememberApiOrigin(prod.replace(/\/api\/highlight$/, ""));
+    }
+  });
+}
 
 // When the live view clears highlights, allow the same selection to be sent again.
 if (window.location.hostname === "localhost" && window.location.pathname === "/") {

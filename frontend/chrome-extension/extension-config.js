@@ -3,7 +3,7 @@ const API_BASE_STORAGE_KEY = "apiBaseUrl";
 
 function isExtensionContextValid() {
   try {
-    return Boolean(chrome.runtime?.id);
+    return Boolean(chrome.runtime.id);
   } catch {
     return false;
   }
@@ -104,6 +104,10 @@ function getHighlightEndpoints() {
     }
     try {
       chrome.storage.local.get([API_BASE_STORAGE_KEY], (result) => {
+        if (chrome.runtime.lastError) {
+          resolve(endpoints);
+          return;
+        }
         const origin = normalizeApiOrigin(result[API_BASE_STORAGE_KEY]);
         if (origin) {
           endpoints.unshift(`${origin}/api/highlight`);

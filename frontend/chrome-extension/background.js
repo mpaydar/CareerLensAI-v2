@@ -2,10 +2,20 @@ importScripts("extension-config.js");
 
 const injectedTabs = new Set();
 
-chrome.runtime.onInstalled.addListener(() => {
+chrome.runtime.onInstalled.addListener((details) => {
   console.log(
-    "[ResumeSnap] Extension updated — refresh open LinkedIn tabs, then open your dashboard once to sync the API URL.",
+    "[ResumeSnap] Extension updated — LinkedIn tabs will reload so highlights work again.",
   );
+  if (details.reason !== "install" && details.reason !== "update") {
+    return;
+  }
+  chrome.tabs.query({ url: ["*://*.linkedin.com/*", "*://linkedin.com/*"] }, (tabs) => {
+    for (const tab of tabs) {
+      if (tab.id) {
+        chrome.tabs.reload(tab.id).catch(() => {});
+      }
+    }
+  });
 });
 
 function postHighlight(payload, endpoints, index = 0) {
