@@ -7,6 +7,9 @@ from pathlib import Path
 
 import spacy
 from spacy.matcher import PhraseMatcher
+from pypdf import PdfReader
+from docx import Document
+
 _SKILLS_PATH = Path(__file__).parent / "skills.txt"
 _NLP: spacy.Language | None = None
 _MATCHER: PhraseMatcher | None = None
@@ -73,7 +76,6 @@ def read_document_text(file_path: str) -> str:
 
 
 def _read_pdf(path: Path) -> str:
-    from pypdf import PdfReader
 
     reader = PdfReader(str(path))
     parts: list[str] = []
@@ -85,7 +87,6 @@ def _read_pdf(path: Path) -> str:
 
 
 def _read_docx(path: Path) -> str:
-    from docx import Document
 
     doc = Document(str(path))
     return "\n".join(p.text for p in doc.paragraphs if p.text.strip())
