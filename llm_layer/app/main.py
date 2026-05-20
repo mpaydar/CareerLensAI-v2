@@ -63,6 +63,26 @@ class InterviewPlanRequest(BaseModel):
     gapSkills: list[str] = Field(min_length=1)
 
 
+def _whisper_installed() -> bool:
+    try:
+        import whisper  # noqa: F401, PLC0415
+    except ImportError:
+        return False
+    return True
+
+
+def _require_whisper_stack() -> None:
+    if _whisper_installed():
+        return
+    raise HTTPException(
+        status_code=503,
+        detail=(
+            "Whisper is not installed on this host (Azure uses requirements-azure.txt). "
+            "Use Railway/Docker for voice transcription, or deploy with full requirements.txt."
+        ),
+    )
+
+
 def _require_ffmpeg() -> None:
     if shutil.which("ffmpeg"):
         return
@@ -86,10 +106,15 @@ def health() -> dict[str, str]:
     except Exception as exc:  # noqa: BLE001
         spacy_status = str(exc)[:200]
 
+    whisper_status = "ok" if _whisper_installed() else "disabled"
+    if whisper_status == "ok" and not ffmpeg_path:
+        whisper_status = "missing-ffmpeg"
+
     return {
         "status": "ok" if spacy_status == "ok" else "degraded",
         "ffmpeg": ffmpeg_path if ffmpeg_path else "missing",
         "spacy": spacy_status,
+        "whisper": whisper_status,
     }
 
 
@@ -133,6 +158,7 @@ async def interview_transcribe(
         audio_path = tmp.name
 
     model_name = os.environ.get("WHISPER_MODEL", model).strip() or "base"
+    _require_whisper_stack()
     _require_ffmpeg()
 
     try:

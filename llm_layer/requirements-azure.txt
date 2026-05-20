@@ -1,10 +1,9 @@
-# Full install (Railway/Docker/local). Azure CI/CD uses requirements-azure.txt instead.
+# Azure App Service: SpaCy gap + interview prep only (no Whisper/torch — saves ~3GB disk).
+# Full stack (Whisper): use requirements.txt on Railway/Docker.
 fastapi>=0.115,<1
 uvicorn[standard]>=0.32,<1
 python-multipart>=0.0.9
 spacy>=3.7,<4
 pypdf>=4.0
 python-docx>=1.1
-openai-whisper>=20231117
-# SpaCy model (installed by Oryx on Azure; also: python -m spacy download en_core_web_sm)
 https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl

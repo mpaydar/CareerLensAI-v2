@@ -13,7 +13,9 @@ After GitHub Actions deploys `llm_layer` to the site root:
 3. **Verify:** `curl https://<your-app>.azurewebsites.net/health`
 4. Set Vercel `LLM_LAYER_URL` to that URL (not localhost).
 
-**Whisper / ffmpeg:** Default Azure Python stacks may not include `ffmpeg`. If `/health` shows `"ffmpeg":"missing"`, use a **custom Docker** image (see `Dockerfile`) or install ffmpeg via an App Service extension; gap analysis (SpaCy) works without ffmpeg.
+**Whisper:** Azure deploy uses `requirements-azure.txt` (no `openai-whisper` / PyTorch) so Oryx does not run out of disk. `/health` shows `"whisper":"disabled"`. Gap analysis and interview questions work on Azure; **voice transcription** should use Railway/Docker (`requirements.txt` + `Dockerfile`).
+
+**ffmpeg:** Not needed on Azure when Whisper is disabled.
 
 ## Local development
 

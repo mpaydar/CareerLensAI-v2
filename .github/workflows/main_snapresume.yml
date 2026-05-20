@@ -26,14 +26,13 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Validate llm_layer install
+      - name: Validate Azure-sized install (no Whisper/torch)
         working-directory: llm_layer
         run: |
           python -m venv antenv
           source antenv/bin/activate
           pip install --upgrade pip
-          pip install -r requirements.txt
-          python -m spacy download en_core_web_sm
+          pip install -r requirements-azure.txt
 
       - name: Package llm_layer for deployment
         run: |
@@ -45,6 +44,8 @@ jobs:
             --exclude '*.pyc' \
             --exclude '.pytest_cache' \
             llm_layer/ _azure_deploy/
+          # Oryx reads requirements.txt — use slim deps to avoid disk full (torch/CUDA).
+          cp llm_layer/requirements-azure.txt _azure_deploy/requirements.txt
           chmod +x _azure_deploy/startup.sh
 
       - name: Upload artifact for deployment jobs
