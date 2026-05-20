@@ -16,29 +16,71 @@ function authHeaders(): Record<string, string> {
   return { Authorization: `Bearer ${secret}` };
 }
 
+function isHtmlErrorPayload(text: string): boolean {
+  const sample = text.trim().slice(0, 200).toLowerCase();
+  return (
+    sample.startsWith("<!doctype html") ||
+    sample.startsWith("<html") ||
+    sample.includes("application error") ||
+    sample.includes("<head>")
+  );
+}
+
+function friendlyLlmLayerError(
+  status: number,
+  raw: string,
+  base: string,
+): string {
+  if (isHtmlErrorPayload(raw)) {
+    return [
+      `LLM layer at ${base} returned an HTML error page (HTTP ${status}), not JSON.`,
+      "The Azure App Service app is likely stopped or misconfigured.",
+      `Open ${base}/health in a browser — you should see JSON with "spacy":"ok".`,
+      "In Azure → snapResume → Configuration → Startup Command: bash startup.sh, then Restart.",
+    ].join(" ");
+  }
+
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return `LLM layer error (HTTP ${status})`;
+  }
+  if (trimmed.length > 320) {
+    return `${trimmed.slice(0, 320)}…`;
+  }
+  return trimmed;
+}
+
 async function parseJsonResponse<T>(res: Response): Promise<T> {
+  const base = getLlmLayerUrl() ?? "LLM layer";
   const text = await res.text();
   let body: Record<string, unknown> = {};
   if (text) {
     try {
       body = JSON.parse(text) as Record<string, unknown>;
     } catch {
+      if (!res.ok || isHtmlErrorPayload(text)) {
+        throw new Error(friendlyLlmLayerError(res.status, text, base));
+      }
       body = { error: text };
     }
   }
 
   if (!res.ok) {
-    const detail =
+    const raw =
       typeof body.detail === "string"
         ? body.detail
         : typeof body.error === "string"
           ? body.error
-          : `LLM layer error (${res.status})`;
-    throw new Error(detail);
+          : text;
+    throw new Error(friendlyLlmLayerError(res.status, raw, base));
   }
 
   if (body.error) {
-    throw new Error(String(body.error));
+    const errText = String(body.error);
+    if (isHtmlErrorPayload(errText)) {
+      throw new Error(friendlyLlmLayerError(res.status, errText, base));
+    }
+    throw new Error(errText);
   }
 
   return body as T;
