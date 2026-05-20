@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "ResumeSnap",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "Highlight any job description and tailor your resume instantly.",
   "permissions": ["activeTab", "scripting", "storage"],
   "host_permissions": [

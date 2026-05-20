@@ -18,10 +18,10 @@ chrome.runtime.onInstalled.addListener((details) => {
   });
 });
 
-function postHighlight(payload, endpoints, index = 0) {
+function postJson(payload, endpoints, index = 0) {
   const url = endpoints[index];
   if (!url) {
-    return Promise.reject(new Error("all live view endpoints failed"));
+    return Promise.reject(new Error("all endpoints failed"));
   }
 
   return fetch(url, {
@@ -30,26 +30,25 @@ function postHighlight(payload, endpoints, index = 0) {
     credentials: "omit",
     body: JSON.stringify(payload),
   }).then(async (response) => {
-      if (response.ok) {
-        console.log("[ResumeSnap] highlight saved to", url);
-        return response;
-      }
-      const detail = await response.text();
-      console.warn("[ResumeSnap] live view POST", url, response.status, detail);
-      throw Object.assign(new Error(detail || `HTTP ${response.status}`), {
-        __httpError: true,
-      });
-    })
-    .catch((error) => {
-      if (error && error.__httpError) {
-        throw error;
-      }
-      console.warn("[ResumeSnap] live view fetch failed:", url, error);
-      if (index + 1 >= endpoints.length) {
-        throw error;
-      }
-      return postHighlight(payload, endpoints, index + 1);
+    if (response.ok) {
+      console.log("[ResumeSnap] saved to", url);
+      return response;
+    }
+    const detail = await response.text();
+    console.warn("[ResumeSnap] POST", url, response.status, detail);
+    throw Object.assign(new Error(detail || `HTTP ${response.status}`), {
+      __httpError: true,
     });
+  }).catch((error) => {
+    if (error && error.__httpError) {
+      throw error;
+    }
+    console.warn("[ResumeSnap] fetch failed:", url, error);
+    if (index + 1 >= endpoints.length) {
+      throw error;
+    }
+    return postJson(payload, endpoints, index + 1);
+  });
 }
 
 async function injectPageSelection(tabId) {
@@ -88,37 +87,29 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     };
 
     getApplicationEndpoints()
-      .then((endpoints) => postHighlight(payload, endpoints))
-      .then(() => sendResponse({ ok: true }))
+      .then((endpoints) => postJson(payload, endpoints))
       .catch((error) => {
         console.warn("[ResumeSnap] application POST failed:", error);
-        sendResponse({ ok: false, error: String(error) });
       });
-
-    return true;
-  }
-
-  if (message.type !== "HIGHLIGHT_CAPTURED") {
     return;
   }
 
-  const payload = {
-    text: message.text || "",
-    sourceUrl: message.sourceUrl || "",
-  };
+  if (message.type === "HIGHLIGHT_CAPTURED") {
+    const payload = {
+      text: message.text || "",
+      sourceUrl: message.sourceUrl || "",
+    };
 
-  getHighlightEndpoints()
-    .then((endpoints) => postHighlight(payload, endpoints))
-    .then(() => sendResponse({ ok: true }))
-    .catch((error) => {
-      console.warn("[ResumeSnap] live view POST failed:", error);
-      sendResponse({ ok: false, error: String(error) });
-    });
-
-  return true;
+    // Fetch from the service worker (not the content script) to bypass page CSP.
+    getHighlightEndpoints()
+      .then((endpoints) => postJson(payload, endpoints))
+      .catch((error) => {
+        console.warn("[ResumeSnap] highlight POST failed:", error);
+      });
+    return;
+  }
 });
 
-// Re-inject after navigation on LinkedIn (SPA).
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (changeInfo.status !== "complete" || !tab.url) {
     return;

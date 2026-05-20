@@ -12,9 +12,6 @@ if (typeof syncApiBaseFromAppPage === "function") {
 
 const STORAGE_KEY = "latestHighlightedText";
 
-/** Cached after a successful storage read; avoids chrome.* when context dies. */
-let cachedApiOrigin = "";
-
 let lastPublishedText = "";
 let lastPublishedAt = 0;
 let lastKnownJobId = "";
@@ -82,14 +79,6 @@ function showRefreshExtensionBanner() {
   document.documentElement.appendChild(bar);
 }
 
-function rememberApiOrigin(origin) {
-  const normalized =
-    typeof normalizeApiOrigin === "function" ? normalizeApiOrigin(origin) : "";
-  if (normalized) {
-    cachedApiOrigin = normalized;
-  }
-}
-
 function requestPageWorldBridge() {
   if (pageBridgeRequested || !isLinkedInHost() || !isExtensionContextValid()) {
     return;
@@ -111,49 +100,23 @@ function requestPageWorldBridge() {
   }
 }
 
-function postHighlightDirect(text, sourceUrl) {
-  const payload = { text, sourceUrl };
-
-  const tryEndpoint = (endpoints, index) => {
-    const url = endpoints[index];
-    if (!url) {
-      return Promise.reject(new Error("all live view endpoints failed"));
-    }
-    return fetch(url, {
-      method: "POST",
-      headers: EXTENSION_FETCH_HEADERS,
-      credentials: "omit",
-      body: JSON.stringify(payload),
-    }).then((response) => {
-      if (response.ok) {
-        console.log("[ResumeSnap] highlight saved to", url);
-        return response;
+/** Relay highlight to the service worker (bypasses LinkedIn page CSP on fetch). */
+function sendHighlightToBackground(selectedText, sourceUrl) {
+  chrome.runtime.sendMessage(
+    {
+      type: "HIGHLIGHT_CAPTURED",
+      text: selectedText,
+      sourceUrl,
+    },
+    () => {
+      if (chrome.runtime.lastError) {
+        console.warn(
+          "[ResumeSnap] background relay failed:",
+          chrome.runtime.lastError.message,
+        );
       }
-      if (index + 1 < endpoints.length) {
-        return tryEndpoint(endpoints, index + 1);
-      }
-      return response.text().then((detail) => {
-        throw new Error(detail || `HTTP ${response.status}`);
-      });
-    });
-  };
-
-  const endpoints = [...DEFAULT_HIGHLIGHT_ENDPOINTS];
-  if (cachedApiOrigin) {
-    endpoints.unshift(`${cachedApiOrigin}/api/highlight`);
-  }
-  if (!isExtensionContextValid()) {
-    return Promise.resolve(tryEndpoint(endpoints, 0));
-  }
-  return getHighlightEndpoints()
-    .then((resolved) => {
-      const origin = resolved.find((url) => !/localhost|127\.0\.0\.1/.test(url));
-      if (origin) {
-        rememberApiOrigin(origin.replace(/\/api\/highlight$/, ""));
-      }
-      return tryEndpoint(resolved, 0);
-    })
-    .catch(() => tryEndpoint(endpoints, 0));
+    },
+  );
 }
 
 function deliverHighlight(text, sourceUrl) {
@@ -205,9 +168,7 @@ function deliverHighlight(text, sourceUrl) {
       return;
     }
 
-    postHighlightDirect(selectedText, source).catch((err) => {
-      console.warn("[ResumeSnap] highlight POST failed:", err);
-    });
+    sendHighlightToBackground(selectedText, source);
 
     console.log("[ResumeSnap] captured:", selectedText.slice(0, 80));
   } catch (error) {
@@ -271,34 +232,9 @@ document.addEventListener("keyup", (event) => {
   }
 });
 
-function postApplicationDirect(payload) {
-  const tryPost = (endpoints, index) => {
-    const url = endpoints[index];
-    if (!url) {
-      return Promise.reject(new Error("no application endpoints"));
-    }
-    return fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    }).then((response) => {
-      if (response.ok) {
-        return response;
-      }
-      if (index + 1 < endpoints.length) {
-        return tryPost(endpoints, index + 1);
-      }
-      throw new Error(`HTTP ${response.status}`);
-    });
-  };
-  return getApplicationEndpoints().then((endpoints) => tryPost(endpoints, 0));
-}
-
 function reportEasyApply(payload) {
   if (!isExtensionContextValid()) {
-    postApplicationDirect(payload).catch((err) => {
-      console.warn("[ResumeSnap] Easy Apply POST failed:", err);
-    });
+    console.warn("[ResumeSnap] Easy Apply skipped — refresh this tab (F5).");
     return;
   }
   try {
@@ -311,16 +247,12 @@ function reportEasyApply(payload) {
       },
       () => {
         if (chrome.runtime.lastError) {
-          postApplicationDirect(payload).catch((err) => {
-            console.warn("[ResumeSnap] Easy Apply POST failed:", err);
-          });
+          console.warn("[ResumeSnap] Easy Apply relay failed:", chrome.runtime.lastError.message);
         }
       },
     );
   } catch {
-    postApplicationDirect(payload).catch((err) => {
-      console.warn("[ResumeSnap] Easy Apply POST failed:", err);
-    });
+    console.warn("[ResumeSnap] Easy Apply skipped — extension context invalid.");
   }
   console.log("[ResumeSnap] Easy Apply likely submitted", payload.jobId);
 }
@@ -336,15 +268,6 @@ document.addEventListener(
 );
 
 requestPageWorldBridge();
-
-if (isExtensionContextValid() && typeof getHighlightEndpoints === "function") {
-  getHighlightEndpoints().then((endpoints) => {
-    const prod = endpoints.find((url) => !/localhost|127\.0\.0\.1/.test(url));
-    if (prod) {
-      rememberApiOrigin(prod.replace(/\/api\/highlight$/, ""));
-    }
-  });
-}
 
 // When the live view clears highlights, allow the same selection to be sent again.
 if (window.location.hostname === "localhost" && window.location.pathname === "/") {
