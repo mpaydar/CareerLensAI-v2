@@ -1,6 +1,7 @@
 "use client";
 
 import { useAccount } from "@/components/account-provider";
+import { SignOutButton } from "@/components/sign-out-button";
 import { useEffect, useState } from "react";
 
 function formatFileSize(bytes: number): string {
@@ -63,7 +64,10 @@ export function OnboardingWelcome() {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/95 p-4">
-      <div className="w-full max-w-lg rounded-2xl border border-zinc-800 bg-zinc-900 p-8 shadow-2xl">
+      <div className="relative w-full max-w-lg rounded-2xl border border-zinc-800 bg-zinc-900 p-8 shadow-2xl">
+        <div className="absolute right-6 top-6">
+          <SignOutButton />
+        </div>
         <p className="text-xs font-medium uppercase tracking-widest text-indigo-400">
           Almost there
         </p>

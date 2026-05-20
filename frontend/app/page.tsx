@@ -4,6 +4,7 @@ import { AccountProvider, useAccount } from "@/components/account-provider";
 import { InterviewPrepCoach } from "@/components/interview-prep-coach";
 import { LoginWelcome } from "@/components/login-welcome";
 import { OnboardingWelcome } from "@/components/onboarding-welcome";
+import { SignOutButton } from "@/components/sign-out-button";
 import { SkillGapDashboard } from "@/components/skill-gap-dashboard";
 import { ApplicationsInsight } from "@/components/applications-insight";
 import { UsageBanner } from "@/components/usage-banner";
@@ -378,28 +379,20 @@ function HomeApp() {
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100">
       <main className="mx-auto flex w-full max-w-5xl flex-col gap-5 px-6 py-10">
-        <div>
-          <h1 className="text-3xl font-semibold">
-            ResumeSnap
-            <span className="ml-2 text-lg font-normal text-zinc-500">
-              · {user.firstName}
-            </span>
-          </h1>
-          <p className="mt-1 text-sm text-zinc-400">
-            Highlight a job description, analyze skill gaps, and tailor your
-            resume with AI.
-          </p>
-          <button
-            type="button"
-            className="mt-3 text-xs text-zinc-500 underline-offset-2 hover:text-zinc-300 hover:underline"
-            onClick={() => {
-              void fetch("/api/auth/signout", { method: "POST" }).then(() =>
-                window.location.reload(),
-              );
-            }}
-          >
-            Sign out
-          </button>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-semibold">
+              ResumeSnap
+              <span className="ml-2 text-lg font-normal text-zinc-500">
+                · {user.firstName}
+              </span>
+            </h1>
+            <p className="mt-1 text-sm text-zinc-400">
+              Highlight a job description, analyze skill gaps, and tailor your
+              resume with AI.
+            </p>
+          </div>
+          <SignOutButton />
         </div>
 
         <UsageBanner />
