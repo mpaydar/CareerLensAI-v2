@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { getClientIpFromHeaders } from "@/lib/client-ip";
+import { getSessionUserIdFromRequest } from "@/lib/session";
+import { getUserById } from "@/lib/user-store";
 import {
   checkRateLimit,
-  FREE_AI_LIMIT,
   getRateLimitIdentifier,
   getUpgradeUrl,
 } from "@/lib/usage";
-import { getSessionUserIdFromRequest } from "@/lib/session";
-import { getUserById } from "@/lib/user-store";
 
 const RATE_LIMITED_PATHS = [
   "/api/optimize",
@@ -15,14 +15,6 @@ const RATE_LIMITED_PATHS = [
   "/api/projects/guide",
   "/api/projects/suggest",
 ];
-
-function getClientIp(request: NextRequest): string {
-  const forwarded = request.headers.get("x-forwarded-for");
-  if (forwarded) {
-    return forwarded.split(",")[0]?.trim() || "unknown";
-  }
-  return request.headers.get("x-real-ip") ?? "unknown";
-}
 
 function isRateLimitedPath(pathname: string): boolean {
   return RATE_LIMITED_PATHS.some(
@@ -41,7 +33,7 @@ export async function middleware(request: NextRequest) {
 
   const userId = getSessionUserIdFromRequest(request);
   const user = userId ? await getUserById(userId) : null;
-  const ip = getClientIp(request);
+  const ip = getClientIpFromHeaders(request.headers);
   const identifier = getRateLimitIdentifier(userId, ip);
 
   const { success, limit, remaining, reset } = await checkRateLimit(

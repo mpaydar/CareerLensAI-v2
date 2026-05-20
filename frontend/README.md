@@ -63,9 +63,30 @@ If it still fails, check the extension popup or service worker console (`chrome:
 
 ## Accounts & free tier
 
-First visit shows onboarding (first name, last name, resume upload). An account is created and stored in Redis with a session cookie.
+Sign in with **GitHub** or **Google**. Returning users skip account creation; new users complete onboarding (confirm name + resume upload). We store name, OAuth provider id, email (if provided), and last login IP in Redis for the session cookie `resumesnap_uid`.
 
 - **Usage banner** — shows remaining free AI credits (3 per month)
 - **Upgrade modal** — appears when credits are exhausted (set `NEXT_PUBLIC_UPGRADE_URL` to your Stripe/checkout link)
 
 `middleware.ts` limits Gemini AI routes to **3 POST requests per user per 30 days** (shared across `/api/optimize` and `/api/projects/*`). Requires Upstash Redis. Highlights and skill gap analysis stay free.
+
+### OAuth setup (Vercel / local)
+
+1. Generate `AUTH_SECRET` (32+ random bytes).
+2. **GitHub** → Settings → Developer settings → OAuth App  
+   - Homepage: your site URL  
+   - Callback: `https://YOUR_DOMAIN/api/auth/callback/github`
+3. **Google** → Cloud Console → APIs & Services → Credentials → OAuth client  
+   - Authorized redirect URI: `https://YOUR_DOMAIN/api/auth/callback/google`
+4. Add to Vercel (and `frontend/.env.local` for local):
+
+| Variable | Purpose |
+|----------|---------|
+| `AUTH_SECRET` | Signs OAuth state cookies |
+| `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | GitHub login |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Google login |
+| `NEXT_PUBLIC_SITE_URL` | Must match OAuth redirect origin (e.g. production URL) |
+| `NEXT_PUBLIC_GITHUB_OAUTH_ENABLED=1` | Shows GitHub button in UI |
+| `NEXT_PUBLIC_GOOGLE_OAUTH_ENABLED=1` | Shows Google button in UI |
+
+Local callbacks use `http://localhost:3000/api/auth/callback/...` when `NEXT_PUBLIC_SITE_URL` is set accordingly.

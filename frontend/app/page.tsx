@@ -2,6 +2,7 @@
 
 import { AccountProvider, useAccount } from "@/components/account-provider";
 import { InterviewPrepCoach } from "@/components/interview-prep-coach";
+import { LoginWelcome } from "@/components/login-welcome";
 import { OnboardingWelcome } from "@/components/onboarding-welcome";
 import { SkillGapDashboard } from "@/components/skill-gap-dashboard";
 import { ApplicationsInsight } from "@/components/applications-insight";
@@ -34,6 +35,21 @@ export default function Home() {
 
 function HomeApp() {
   const { user, loading, resume: resumeMeta, refreshAccount } = useAccount();
+  const [authError, setAuthError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const params = new URLSearchParams(window.location.search);
+    const err = params.get("auth_error");
+    if (err) {
+      setAuthError(err);
+      const url = new URL(window.location.href);
+      url.searchParams.delete("auth_error");
+      window.history.replaceState({}, "", url.pathname + url.search);
+    }
+  }, []);
   const [highlight, setHighlight] = useState<HighlightResponse>({
     text: "",
     sourceUrl: "",
@@ -351,7 +367,11 @@ function HomeApp() {
     );
   }
 
-  if (!user?.onboardingComplete) {
+  if (!user) {
+    return <LoginWelcome authError={authError} />;
+  }
+
+  if (!user.onboardingComplete) {
     return <OnboardingWelcome />;
   }
 
@@ -369,6 +389,17 @@ function HomeApp() {
             Highlight a job description, analyze skill gaps, and tailor your
             resume with AI.
           </p>
+          <button
+            type="button"
+            className="mt-3 text-xs text-zinc-500 underline-offset-2 hover:text-zinc-300 hover:underline"
+            onClick={() => {
+              void fetch("/api/auth/signout", { method: "POST" }).then(() =>
+                window.location.reload(),
+              );
+            }}
+          >
+            Sign out
+          </button>
         </div>
 
         <UsageBanner />

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/auth";
+import { getClientIpFromHeaders } from "@/lib/client-ip";
 import { getHighlightScopeId } from "@/lib/highlight-scope";
 import { getResumeMeta } from "@/lib/resume-upload";
 import { getSessionUserId } from "@/lib/session";
@@ -10,18 +11,10 @@ import {
   getUsageStats,
 } from "@/lib/usage";
 
-function getClientIp(request: Request): string {
-  const forwarded = request.headers.get("x-forwarded-for");
-  if (forwarded) {
-    return forwarded.split(",")[0]?.trim() || "unknown";
-  }
-  return request.headers.get("x-real-ip") ?? "unknown";
-}
-
 export async function GET(request: Request) {
   const user = await getAuthenticatedUser();
   const userId = await getSessionUserId();
-  const ip = getClientIp(request);
+  const ip = getClientIpFromHeaders(request.headers);
   const identifier = getRateLimitIdentifier(userId, ip);
   const usage = await getUsageStats(identifier);
 
@@ -49,6 +42,8 @@ export async function GET(request: Request) {
       plan: user.plan,
       onboardingComplete: user.onboardingComplete,
       createdAt: user.createdAt,
+      authProvider: user.authProvider,
+      email: user.email,
     },
     resume,
     usage: usage ?? {

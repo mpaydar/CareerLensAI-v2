@@ -5,6 +5,8 @@ export type AccountUser = {
   plan: "free" | "pro";
   onboardingComplete: boolean;
   createdAt: string;
+  authProvider?: "github" | "google";
+  email?: string;
 };
 
 export type ResumeMeta = {

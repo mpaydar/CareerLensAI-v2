@@ -1,7 +1,7 @@
 "use client";
 
 import { useAccount } from "@/components/account-provider";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -10,12 +10,19 @@ function formatFileSize(bytes: number): string {
 }
 
 export function OnboardingWelcome() {
-  const { refreshAccount } = useAccount();
+  const { user, refreshAccount } = useAccount();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (user) {
+      setFirstName(user.firstName);
+      setLastName(user.lastName);
+    }
+  }, [user]);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -58,15 +65,25 @@ export function OnboardingWelcome() {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/95 p-4">
       <div className="w-full max-w-lg rounded-2xl border border-zinc-800 bg-zinc-900 p-8 shadow-2xl">
         <p className="text-xs font-medium uppercase tracking-widest text-indigo-400">
-          Welcome to ResumeSnap
+          Almost there
         </p>
         <h1 className="mt-2 text-2xl font-semibold text-zinc-50">
-          Let&apos;s set up your account
+          Upload your resume
         </h1>
         <p className="mt-2 text-sm leading-relaxed text-zinc-400">
-          Tell us your name and upload the resume you want to tailor. You&apos;ll
-          get <strong className="text-zinc-200">3 free AI-powered actions</strong>{" "}
-          each month to try bullet optimization and project ideas.
+          {user?.authProvider ? (
+            <>
+              Signed in with{" "}
+              <span className="capitalize text-zinc-200">
+                {user.authProvider}
+              </span>
+              . Confirm your name and add the resume you want to tailor.
+            </>
+          ) : (
+            <>
+              Confirm your name and upload the resume you want to tailor.
+            </>
+          )}
         </p>
 
         <form onSubmit={(e) => void handleSubmit(e)} className="mt-8 space-y-5">
@@ -79,7 +96,6 @@ export function OnboardingWelcome() {
                 onChange={(e) => setFirstName(e.target.value)}
                 autoComplete="given-name"
                 className="mt-1.5 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm text-zinc-100 outline-none ring-indigo-500/0 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
-                placeholder="Alex"
               />
             </label>
             <label className="block">
@@ -90,7 +106,6 @@ export function OnboardingWelcome() {
                 onChange={(e) => setLastName(e.target.value)}
                 autoComplete="family-name"
                 className="mt-1.5 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm text-zinc-100 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
-                placeholder="Rivera"
               />
             </label>
           </div>
@@ -123,7 +138,7 @@ export function OnboardingWelcome() {
             disabled={busy}
             className="w-full rounded-lg bg-indigo-600 py-3 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {busy ? "Creating your account…" : "Get started"}
+            {busy ? "Saving…" : "Continue to dashboard"}
           </button>
         </form>
       </div>
