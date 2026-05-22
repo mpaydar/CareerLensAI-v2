@@ -92,7 +92,7 @@ def _require_whisper_stack() -> None:
         status_code=503,
         detail=(
             "Whisper is not installed on this host (Azure uses requirements-azure.txt). "
-            "Use Railway/Docker for voice transcription, or deploy with full requirements.txt."
+            "Use Azure Speech on Vercel, Cloud Run Docker + requirements-full.txt, or local Whisper."
         ),
     )
 

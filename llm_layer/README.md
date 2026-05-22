@@ -1,76 +1,60 @@
 # LLM Layer
 
-Python service for SpaCy skill gap analysis, optimize-context selection, interview question generation, and Whisper transcription.
+Python service for SpaCy skill gap analysis, optimize-context selection, interview question generation, and optional Whisper transcription.
 
-Deploy this folder to [Railway](https://railway.app) (root directory: `llm_layer`), **Google Cloud Run** (buildpacks or Docker), or **Azure App Service** `snapResume` via `.github/workflows/main_snapresume.yml`.
+**Production:** deploy to **Google Cloud Run** only (this repo). See [docs/cloud-run-deploy.md](../docs/cloud-run-deploy.md).
 
-## Google Cloud Run (buildpacks)
+## Google Cloud Run
 
-Cloud Run must build from the **`llm_layer`** directory (not the monorepo root or `frontend/`).
-
-Buildpack entry files in this folder:
+Cloud Run must build from the **`llm_layer`** directory (not `frontend/`).
 
 | File | Purpose |
 |------|---------|
-| `main.py` | Exposes `app` for `gunicorn main:app` / buildpack detection |
-| `Procfile` | `web: uvicorn app.main:app …` (overrides default) |
-| `.python-version` / `runtime.txt` | Python **3.13** (ubuntu2404 buildpack has 3.13–3.14 only, not 3.11) |
-| `requirements.txt` | Dependencies (full stack; large build) |
+| `main.py` | Exposes `app` for buildpack / gunicorn |
+| `Procfile` | `web: uvicorn app.main:app …` |
+| `.python-version` / `runtime.txt` | Python **3.13** |
+| `requirements.txt` | Slim stack (SpaCy only — fast buildpack) |
+| `Dockerfile` + `requirements-full.txt` | Optional full stack (SpaCy + Whisper) |
 
-**Create service (console):** Deploy from repo → **Source directory** = `llm_layer` → buildpack (not Dockerfile).
+**Console:** Deploy from repo → **Source directory** = `llm_layer` → buildpack (or Dockerfile for Whisper).
 
 **Runtime env (Cloud Run → Variables):**
 
 | Variable | Value |
 |----------|--------|
 | `LLM_LAYER_SECRET` | Same secret as Vercel `LLM_LAYER_SECRET` |
+| `WHISPER_MODEL` | Optional; only if using Docker + full requirements |
 
 **Vercel:** `LLM_LAYER_URL=https://<cloud-run-service-url>` (no trailing slash).
 
 **Verify:** `curl https://<url>/health` → JSON with `"spacy":"ok"`.
 
-**Smaller / faster builds (no Whisper):** Before deploy, use `requirements-azure.txt` as the install list (rename or replace `requirements.txt` for that deploy only), or switch to Docker later. Whisper needs `requirements.txt` + `Dockerfile`.
+**GitHub Actions deploy:** `.github/workflows/deploy-cloudrun.yml` (secret `GCP_SA_KEY`).
 
-**If build fails with “unknown project descriptor schema version”:** Remove `project.toml`; use `Procfile` + `main.py` + `.python-version` only.
+**Smaller builds:** Default `requirements.txt` has no Whisper/torch. For voice on the LLM layer, use `Dockerfile` + `requirements-full.txt`, or Azure Speech on Vercel.
 
-**If build fails with “Missing Entrypoint”:** Set source directory to `llm_layer`, or use repo-root shim (`/main.py`, `/Procfile`, `/requirements.txt`).
-
-**If `/health` returns HTML “Placeholder | Cloud Run”:** The FastAPI app never deployed — redeploy after a successful build; check Logs for `uvicorn` startup.
+**Troubleshooting:** [docs/cloud-run-deploy.md](../docs/cloud-run-deploy.md) (placeholder page, invalid image name, Pull step failures).
 
 **gcloud example:**
 
 ```bash
-gcloud run deploy llm-layer \
+gcloud run deploy llmp-layer \
   --source llm_layer \
-  --region us-central1 \
+  --region us-south1 \
   --allow-unauthenticated \
   --set-env-vars "LLM_LAYER_SECRET=your-secret" \
   --memory 2Gi \
   --timeout 300
 ```
 
-## Azure App Service (snapResume)
+## Azure App Service (legacy, manual workflow only)
 
-After GitHub Actions deploys `llm_layer` to the site root:
-
-1. **Configuration → General settings → Startup Command:** `bash startup.sh`  
-   (If you skip this, Azure may run the default Flask placeholder and every URL returns HTML `404 Not Found`.)
-2. **Application settings:** `LLM_LAYER_SECRET`, optional `WHISPER_MODEL` (same names as Railway)
-3. **Verify:** `curl https://<your-app>.azurewebsites.net/health` → JSON with `"spacy":"ok"`  
-   Root `GET /` should return JSON `service`, not HTML.
-4. Set Vercel `LLM_LAYER_URL` to that URL (not localhost).
-
-**Troubleshooting HTML 404:** Wrong app is running. Set startup command, **Save**, then **Restart** the App Service. Check **Log stream** for `uvicorn` or `gunicorn` startup lines.
-
-**Whisper:** Azure deploy uses `requirements-azure.txt` (no `openai-whisper` / PyTorch) so Oryx does not run out of disk. `/health` shows `"whisper":"disabled"`. Gap analysis and interview questions work on Azure; **voice transcription** should use Railway/Docker (`requirements.txt` + `Dockerfile`).
-
-**ffmpeg:** Not needed on Azure when Whisper is disabled.
+`.github/workflows/main_snapresume.yml` runs only via **workflow_dispatch**. Same env vars as Cloud Run. Whisper disabled on Azure slim deploy — use Azure Speech on Vercel for voice.
 
 ## Local development
 
 ```bash
-# Whisper needs ffmpeg on your PATH (macOS)
-brew install ffmpeg
+brew install ffmpeg   # for Whisper locally
 
 cd llm_layer
 python3 -m venv .venv
@@ -80,23 +64,16 @@ python -m spacy download en_core_web_sm
 uvicorn app.main:app --reload --port 8000
 ```
 
-Check setup: `curl http://localhost:8000/health` should include `"ffmpeg": true`.
+`curl http://localhost:8000/health` should include `"ffmpeg": true` when Whisper stack is installed.
 
-Set in `frontend/.env.local`:
+`frontend/.env.local`:
 
 ```bash
 LLM_LAYER_URL=http://localhost:8000
-# Optional shared secret (must match Railway env)
 # LLM_LAYER_SECRET=your-secret
 ```
 
-## Railway environment
-
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `LLM_LAYER_SECRET` | Recommended | Bearer token; set the same value on Vercel as `LLM_LAYER_SECRET` |
-| `WHISPER_MODEL` | No | Whisper model name (default `base`) |
-| `PORT` | Auto | Set by Railway |
+For voice in production without Whisper on Cloud Run, set on Vercel: `AZURE_SPEECH_KEY`, `AZURE_SPEECH_REGION`.
 
 ## API
 
@@ -106,6 +83,6 @@ LLM_LAYER_URL=http://localhost:8000
 | POST | `/gap/analyze` | `{ resumeText, jobDescription }` |
 | POST | `/optimize/context` | `{ resumeText, jobDescription, skill }` |
 | POST | `/interview/plan` | `{ gapSkills: string[] }` |
-| POST | `/interview/transcribe` | multipart `file` |
+| POST | `/interview/transcribe` | multipart `file` (needs full stack or returns 503 on slim deploy) |
 
 Send `Authorization: Bearer <LLM_LAYER_SECRET>` when the secret is configured.

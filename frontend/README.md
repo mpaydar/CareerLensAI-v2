@@ -22,7 +22,7 @@ Load the extension from `frontend/chrome-extension/` via `chrome://extensions` (
 
 In the Vercel dashboard, set **Root Directory** to `frontend` (not the repo root).
 
-Add `LLM_LAYER_URL` and `LLM_LAYER_SECRET` pointing at your Railway deployment for full SpaCy/Whisper features in production.
+Add `LLM_LAYER_URL` and `LLM_LAYER_SECRET` pointing at your **Cloud Run** `llmp-layer` service (`https://….run.app`, no trailing slash). For interview voice, add `AZURE_SPEECH_KEY` and `AZURE_SPEECH_REGION` (preferred on Vercel) or use a Cloud Run Docker deploy with Whisper.
 
 ## Vercel + extension setup
 

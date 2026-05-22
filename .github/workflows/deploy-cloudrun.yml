@@ -13,6 +13,8 @@ on:
       - "Procfile"
       - "requirements.txt"
       - ".python-version"
+      - "cloudbuild.yaml"
+      - "docs/cloud-run-deploy.md"
       - ".github/workflows/deploy-cloudrun.yml"
   workflow_dispatch:
 

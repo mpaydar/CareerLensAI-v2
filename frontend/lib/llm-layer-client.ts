@@ -1,4 +1,4 @@
-/** HTTP client for the Railway-hosted Python LLM layer. */
+/** HTTP client for the Cloud Run / local Python LLM layer. */
 
 export function getLlmLayerUrl(): string | null {
   const raw = process.env.LLM_LAYER_URL?.trim();

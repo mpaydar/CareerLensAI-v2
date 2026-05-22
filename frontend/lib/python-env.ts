@@ -60,6 +60,6 @@ export function llmLayerSetupHint(): string {
     "SpaCy runs through the LLM layer (recommended), not bare python3 on your PATH.",
     "Add to frontend/.env.local: LLM_LAYER_URL=http://localhost:8000",
     "Then run: cd llm_layer && source .venv/bin/activate && python -m uvicorn app.main:app --reload --port 8000",
-    "Restart npm run dev. On Vercel, set LLM_LAYER_URL to your Railway URL.",
+    "Restart npm run dev. On Vercel, set LLM_LAYER_URL to your Cloud Run service URL.",
   ].join(" ");
 }

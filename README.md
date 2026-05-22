@@ -7,7 +7,7 @@ Monorepo for ResumeSnap / CareerLens:
 | Folder | Deploy to | Purpose |
 |--------|-----------|---------|
 | [`frontend/`](frontend/) | **Vercel** | Next.js app, accounts, Redis, **Gemini** (resume bullets / projects only) |
-| [`llm_layer/`](llm_layer/) | **Cloud Run** (buildpacks/Docker), **Railway**, Azure | **SpaCy** gap analysis + context fit, optimize context, interview prep, Whisper |
+| [`llm_layer/`](llm_layer/) | **Cloud Run** (buildpacks/Docker); Azure manual-only | **SpaCy** gap analysis + context fit, optimize context, interview prep |
 | [`frontend/chrome-extension/`](frontend/chrome-extension/) | Chrome | Job-description highlighting |
 
 ## Quick start (local)
@@ -50,18 +50,15 @@ Load unpacked from `frontend/chrome-extension/` in `chrome://extensions`.
 - **Root directory:** `frontend`
 - Env: `GEMINI_API_KEY`, Upstash Redis, `LLM_LAYER_URL`, `LLM_LAYER_SECRET`, `NEXT_PUBLIC_UPGRADE_URL`
 
-### Cloud Run (buildpacks)
+### Cloud Run (production LLM layer)
 
-- **Preferred source directory:** `llm_layer`
-- **GitHub → Cloud Run (repo root):** `main.py`, `Procfile`, `requirements.txt`, `.python-version` (3.13) at repo root
-- **Azure GitHub Action** is **manual-only** now (`workflow_dispatch`) — it does not deploy Cloud Run
-- Env: `LLM_LAYER_SECRET` (same as Vercel); set Vercel `LLM_LAYER_URL` to the Cloud Run service URL
-- After deploy, `curl $LLM_LAYER_URL/health` must return JSON, not “Placeholder | Cloud Run” HTML
+- **Source directory:** `llm_layer` (or repo root with `main.py` / `Procfile` shim)
+- **Deploy:** GitHub Actions [`.github/workflows/deploy-cloudrun.yml`](.github/workflows/deploy-cloudrun.yml) (needs `GCP_SA_KEY`) and/or GCP continuous deployment — see [docs/cloud-run-deploy.md](docs/cloud-run-deploy.md)
+- **Azure GitHub Action** is **manual-only** (`workflow_dispatch`) — legacy, not used for Cloud Run
+- Env on Cloud Run: `LLM_LAYER_SECRET` (same as Vercel). On Vercel: `LLM_LAYER_URL` = Cloud Run service URL (no trailing slash)
+- **Voice (Whisper):** use Azure Speech on Vercel (`AZURE_SPEECH_KEY` / `AZURE_SPEECH_REGION`), or local dev with `requirements-full.txt`; slim Cloud Run buildpack has SpaCy only
+- After deploy: `curl $LLM_LAYER_URL/health` → JSON with `"spacy":"ok"`, not “Placeholder | Cloud Run” HTML
 
-### Railway
-
-- **Root directory:** `llm_layer`
-- Uses `Dockerfile` (SpaCy + Whisper)
-- Env: `LLM_LAYER_SECRET` (same as Vercel)
+**Disconnect Railway:** if the repo was linked in [railway.app](https://railway.app), remove the GitHub integration there so pushes no longer deploy `lively-perfection`.
 
 See [frontend/README.md](frontend/README.md) and [llm_layer/README.md](llm_layer/README.md) for details.

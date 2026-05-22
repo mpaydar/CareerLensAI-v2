@@ -31,7 +31,7 @@ const ANALYZE_SCRIPT = path.join(SKILLS_SERVICE_DIR, "analyze.py");
 function requireLlmLayerMessage(): string {
   if (process.env.VERCEL) {
     return [
-      "Skills gap uses SpaCy on the LLM layer (Cloud Run / Railway), not Gemini.",
+      "Skills gap uses SpaCy on the LLM layer (Cloud Run), not Gemini.",
       "Vercel → Environment Variables:",
       "  LLM_LAYER_URL = https://your-service-….run.app (no trailing slash)",
       "  LLM_LAYER_SECRET = same as Cloud Run",
@@ -129,7 +129,7 @@ async function runLlmLayerGapAnalysis(
 }
 
 /**
- * Skills gap = SpaCy only (keyword + context), via Railway locally or in prod.
+ * Skills gap = SpaCy only (keyword + context), via LLM layer locally or Cloud Run in prod.
  * Gemini is not used here — only resume optimize / project bullets use Gemini.
  */
 export async function runGapAnalysis(

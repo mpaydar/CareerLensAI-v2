@@ -18,7 +18,7 @@ import {
 function requireLlmLayerMessage(): string {
   if (process.env.VERCEL) {
     return [
-      "Interview questions use the LLM layer (Azure/Railway). Voice uses Azure Speech or the LLM layer.",
+      "Interview questions use the LLM layer (Cloud Run). Voice uses Azure Speech or the LLM layer (Whisper).",
       "Set LLM_LAYER_URL + LLM_LAYER_SECRET for gap/questions, and AZURE_SPEECH_KEY + AZURE_SPEECH_REGION for voice.",
     ].join(" ");
   }
@@ -39,7 +39,7 @@ function requireTranscribeMessage(): string {
     return [
       "Voice transcription is not configured.",
       "Add AZURE_SPEECH_KEY and AZURE_SPEECH_REGION on Vercel (Azure portal → Speech resource → Keys and endpoint),",
-      "or set LLM_LAYER_URL to a host with Whisper (Railway/Docker).",
+      "or deploy llm_layer on Cloud Run with Dockerfile + requirements-full.txt for Whisper.",
     ].join(" ");
   }
   return [

@@ -1,4 +1,4 @@
-# Full install (Docker/Railway/local Whisper). Cloud Run buildpacks use requirements.txt (slim).
+# Full install (local dev or Cloud Run Docker). Buildpacks use requirements.txt (slim).
 fastapi>=0.115,<1
 uvicorn[standard]>=0.32,<1
 python-multipart>=0.0.9

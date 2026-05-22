@@ -24,6 +24,14 @@ If curl returns HTML **“Sorry, this is just a placeholder…”**, Cloud Run i
 
 **Fix:** deploy a real revision (below).
 
+## Stop Railway deploys (optional cleanup)
+
+Railway is **not** configured in this repo anymore (`railway.toml` removed). If GitHub still shows **Railway is deploying** on push:
+
+1. [railway.app](https://railway.app) → project (e.g. `lively-perfection`) → **Settings**
+2. Disconnect the GitHub repo or delete the service
+3. On Vercel, ensure `LLM_LAYER_URL` points at **Cloud Run** (`https://llmp-layer-….run.app`), not a `*.railway.app` URL
+
 ## Two pipelines (do not confuse them)
 
 | Pipeline | Trigger | Target |

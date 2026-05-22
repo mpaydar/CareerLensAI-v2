@@ -1,5 +1,5 @@
 # Azure App Service: SpaCy gap + interview prep only (no Whisper/torch — saves ~3GB disk).
-# Full stack (Whisper): use requirements.txt on Railway/Docker.
+# Full stack (Whisper): use requirements-full.txt with Dockerfile on Cloud Run.
 fastapi>=0.115,<1
 uvicorn[standard]>=0.32,<1
 gunicorn>=22.0,<24
