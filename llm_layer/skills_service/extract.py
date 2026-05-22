@@ -255,6 +255,7 @@ def analyze_gap(resume_text: str, job_description: str) -> dict:
     resume_skills = extract_skills(resume_text)
     jd_skills = extract_skills(job_description)
 
+
     resume_set = set(resume_skills)
     jd_set = set(jd_skills)
 
