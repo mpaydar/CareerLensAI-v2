@@ -28,6 +28,8 @@ def main() -> int:
         print(json.dumps({"error": "jobDescription must be at least 20 characters"}))
         return 1
 
+        
+
     try:
         if not resume_text:
             resume_text = read_document_text(resume_path)
