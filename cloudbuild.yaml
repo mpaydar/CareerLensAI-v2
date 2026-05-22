@@ -1,4 +1,11 @@
-# Optional: use if the Cloud Run trigger runs this file (not the default GitHub pack step).
+# Use this file on the Cloud Run GitHub trigger (or a custom Cloud Build trigger).
+# Set substitution _IMAGE_NAME in the trigger, or rely on the default below.
+#
+# Do NOT use careerlensai-_v2 in image paths — GitHub repo "CareerLensAI-_V2"
+# lowercases to an invalid Docker name (_ then - with no alphanumeric between).
+substitutions:
+  _IMAGE_NAME: us-south1-docker.pkg.dev/gen-lang-client-0977136682/cloud-run-source-deploy/careerlensai-v2/llmp-layer:${COMMIT_SHA}
+
 steps:
   - name: gcr.io/k8s-skaffold/pack
     entrypoint: pack
@@ -7,6 +14,7 @@ steps:
       - $_IMAGE_NAME
       - --builder=gcr.io/buildpacks/builder:latest
       - --path=.
-      - --env=GOOGLE_PYTHON_VERSION=3.11.x
+      - --env=GOOGLE_PYTHON_VERSION=3.13.x
+      - --publish
 images:
   - $_IMAGE_NAME

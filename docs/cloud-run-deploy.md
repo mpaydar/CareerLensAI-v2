@@ -1,5 +1,23 @@
 # Cloud Run deploy (llm-layer)
 
+## Buildpack green, Pull fails (`invalid reference format`)
+
+**Root cause:** GitHub repo [`CareerLensAI-_V2`](https://github.com/mpaydar/CareerLensAI-_V2) becomes image path `careerlensai-_v2`. That segment is **invalid** for Docker/OCI (`_` immediately followed by `-`). The buildpack step can still push the image; the auto-generated **Pull** step then fails.
+
+**Permanent fix (recommended):**
+
+1. GitHub → repo **Settings** → **General** → rename to `CareerLensAI-v2` (no `_` before `V`).
+2. Update local `git remote` URL if needed.
+3. Cloud Run → **llmp-layer** → reconnect continuous deployment to the renamed repo (or edit the Cloud Build trigger so image paths use `careerlensai-v2`).
+
+**Workarounds without renaming:**
+
+| Option | What to do |
+|--------|------------|
+| **GitHub Actions** | Add secret `GCP_SA_KEY`; workflow `.github/workflows/deploy-cloudrun.yml` runs `gcloud run deploy --source llm_layer` (skips the broken Pull step). |
+| **Manual deploy** | After a green Buildpack, Cloud Run → **Deploy revision** → pick the image tag from Artifact Registry. |
+| **Custom `cloudbuild.yaml`** | Point the trigger at repo `cloudbuild.yaml` (valid `_IMAGE_NAME` default: `.../careerlensai-v2/llmp-layer:${COMMIT_SHA}`). Remove extra Pull/Push steps if you added them on top of `--publish`. |
+
 ## Placeholder page at `/health`
 
 If curl returns HTML **“Sorry, this is just a placeholder…”**, Cloud Run is serving the **default revision** — your FastAPI image **never deployed** (build failed, or Deploy/Pull step failed).
@@ -46,36 +64,12 @@ gcloud run deploy llmp-layer \
 
 If **Buildpack** succeeded but **Pull/Deploy** failed, the image is in **Artifact Registry**:
 
-`cloud-run-source-deploy/careerlensai-_v2/llmp-layer:<git-sha>`
+`cloud-run-source-deploy/careerlensai-v2/llmp-layer:<git-sha>` (after repo rename; legacy path was `careerlensai-_v2`)
 
 1. Cloud Run → **llmp-layer** → **Edit & deploy new revision**
 2. **Container image URL** → select that image (e.g. tag `c9d07fa…`)
 3. Env var `LLM_LAYER_SECRET`
 4. Deploy → **Manage traffic** → 100% to new revision
-
-## Build succeeded but step “Pull” failed (`invalid reference format`)
-
-The **Buildpack** step often **succeeds** and pushes an image to:
-
-`us-south1-docker.pkg.dev/.../cloud-run-source-deploy/careerlensai-_v2/llmp-layer:<git-sha>`
-
-The following **Pull** step is a known flaky step in some auto-generated Cloud Run triggers.
-
-**Fix options:**
-
-1. **Cloud Run console** → **llmp-layer** → **Revisions** → **Deploy new revision** → select the latest image from Artifact Registry (same SHA as the green build).
-2. **Retry** the failed Cloud Build run.
-3. **CLI** (after a successful buildpack):
-
-   ```bash
-   gcloud run deploy llmp-layer \
-     --image us-south1-docker.pkg.dev/gen-lang-client-0977136682/cloud-run-source-deploy/careerlensai-_v2/llmp-layer:COMMIT_SHA \
-     --region us-south1 \
-     --allow-unauthenticated \
-     --set-env-vars "LLM_LAYER_SECRET=your-secret" \
-     --memory 2Gi \
-     --timeout 300
-   ```
 
 ## Verify
 
