@@ -38,6 +38,8 @@ export default function Home() {
 function HomeApp() {
   const { user, loading, resume: resumeMeta, refreshAccount } = useAccount();
   const [authError, setAuthError] = useState<string | null>(null);
+  const [focusUpdating, setFocusUpdating] = useState(false);
+  const [focusError, setFocusError] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -361,6 +363,31 @@ function HomeApp() {
     return "Live updates active";
   }, [highlight.text, isOnline, highlightStorage]);
 
+  const updateCareerFocus = useCallback(
+    async (careerFocus: "industrial" | "academic") => {
+      setFocusError(null);
+      setFocusUpdating(true);
+      try {
+        const response = await fetch("/api/account", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ careerFocus }),
+        });
+        const data = (await response.json()) as { error?: string };
+        if (!response.ok) {
+          setFocusError(data.error ?? "Could not update role focus.");
+          return;
+        }
+        await refreshAccount();
+      } catch {
+        setFocusError("Could not update role focus.");
+      } finally {
+        setFocusUpdating(false);
+      }
+    },
+    [refreshAccount],
+  );
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-zinc-950 text-zinc-400">
@@ -393,8 +420,31 @@ function HomeApp() {
               resume with AI.
             </p>
           </div>
-          <SignOutButton />
+          <div className="flex items-center gap-2">
+            <label className="flex items-center gap-2 text-xs text-zinc-400">
+              Focus
+              <select
+                value={user.careerFocus}
+                onChange={(e) =>
+                  void updateCareerFocus(
+                    e.target.value as "industrial" | "academic",
+                  )
+                }
+                disabled={focusUpdating}
+                className="rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs text-zinc-200 outline-none focus:border-indigo-500 disabled:opacity-60"
+              >
+                <option value="industrial">Industrial</option>
+                <option value="academic">Academic</option>
+              </select>
+            </label>
+            <SignOutButton />
+          </div>
         </div>
+        {focusError ? (
+          <p className="rounded-lg border border-red-900/50 bg-red-950/30 px-3 py-2 text-xs text-red-300">
+            {focusError}
+          </p>
+        ) : null}
 
         <UsageBanner />
 
