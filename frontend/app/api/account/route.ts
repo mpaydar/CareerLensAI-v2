@@ -4,7 +4,6 @@ import { getClientIpFromHeaders } from "@/lib/client-ip";
 import { getHighlightScopeId } from "@/lib/highlight-scope";
 import { getResumeMeta } from "@/lib/resume-upload";
 import { getSessionUserId } from "@/lib/session";
-import { updateUserProfile } from "@/lib/user-store";
 import {
   FREE_AI_LIMIT,
   getRateLimitIdentifier,
@@ -57,51 +56,4 @@ export async function GET(request: Request) {
     upgradeUrl: getUpgradeUrl(),
     highlightScopeId: await getHighlightScopeId(),
   });
-}
-
-export async function PATCH(request: Request) {
-  try {
-    const userId = await getSessionUserId();
-    if (!userId) {
-      return NextResponse.json(
-        { error: "Sign in with GitHub or Google first." },
-        { status: 401 },
-      );
-    }
-
-    const body = (await request.json()) as {
-      careerFocus?: "industrial" | "academic";
-    };
-    const careerFocus = body?.careerFocus;
-    if (careerFocus !== "industrial" && careerFocus !== "academic") {
-      return NextResponse.json(
-        { error: "Please select a valid role focus." },
-        { status: 400 },
-      );
-    }
-
-    const updated = await updateUserProfile(userId, { careerFocus });
-    if (!updated) {
-      return NextResponse.json({ error: "Account not found." }, { status: 404 });
-    }
-
-    return NextResponse.json({
-      user: {
-        id: updated.id,
-        firstName: updated.firstName,
-        lastName: updated.lastName,
-        careerFocus: updated.careerFocus ?? "industrial",
-        plan: updated.plan,
-        onboardingComplete: updated.onboardingComplete,
-        createdAt: updated.createdAt,
-        authProvider: updated.authProvider,
-        email: updated.email,
-      },
-    });
-  } catch {
-    return NextResponse.json(
-      { error: "Could not update account settings." },
-      { status: 400 },
-    );
-  }
 }
