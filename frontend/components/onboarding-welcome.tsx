@@ -14,6 +14,9 @@ export function OnboardingWelcome() {
   const { user, refreshAccount } = useAccount();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [careerFocus, setCareerFocus] = useState<"industrial" | "academic">(
+    "industrial",
+  );
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -43,6 +46,7 @@ export function OnboardingWelcome() {
       const body = new FormData();
       body.set("firstName", firstName.trim());
       body.set("lastName", lastName.trim());
+      body.set("careerFocus", careerFocus);
       body.set("file", file);
 
       const response = await fetch("/api/account/onboard", {
@@ -113,6 +117,20 @@ export function OnboardingWelcome() {
               />
             </label>
           </div>
+
+          <label className="block">
+            <span className="text-xs font-medium text-zinc-400">Role focus</span>
+            <select
+              value={careerFocus}
+              onChange={(e) =>
+                setCareerFocus(e.target.value as "industrial" | "academic")
+              }
+              className="mt-1.5 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm text-zinc-100 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
+            >
+              <option value="industrial">Industrial opportunities</option>
+              <option value="academic">Academic opportunities</option>
+            </select>
+          </label>
 
           <label className="block">
             <span className="text-xs font-medium text-zinc-400">Your resume</span>

@@ -31,6 +31,7 @@ export async function POST(request: Request) {
     const formData = await request.formData();
     const firstName = String(formData.get("firstName") ?? "").trim();
     const lastName = String(formData.get("lastName") ?? "").trim();
+    const careerFocus = String(formData.get("careerFocus") ?? "industrial").trim();
     const file = formData.get("file");
 
     if (!firstName || !lastName) {
@@ -47,7 +48,14 @@ export async function POST(request: Request) {
       );
     }
 
-    await updateUserProfile(userId, { firstName, lastName });
+    if (careerFocus !== "industrial" && careerFocus !== "academic") {
+      return NextResponse.json(
+        { error: "Please select a valid role focus." },
+        { status: 400 },
+      );
+    }
+
+    await updateUserProfile(userId, { firstName, lastName, careerFocus });
     const meta = await saveResumeFromUpload(userId, file);
     const completed = await completeOnboarding(userId);
 
@@ -63,6 +71,7 @@ export async function POST(request: Request) {
         id: completed.id,
         firstName: completed.firstName,
         lastName: completed.lastName,
+        careerFocus: completed.careerFocus ?? "industrial",
         plan: completed.plan,
         onboardingComplete: completed.onboardingComplete,
         createdAt: completed.createdAt,

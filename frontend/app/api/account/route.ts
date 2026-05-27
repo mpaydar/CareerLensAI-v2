@@ -39,6 +39,7 @@ export async function GET(request: Request) {
       id: user.id,
       firstName: user.firstName,
       lastName: user.lastName,
+      careerFocus: user.careerFocus ?? "industrial",
       plan: user.plan,
       onboardingComplete: user.onboardingComplete,
       createdAt: user.createdAt,

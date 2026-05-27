@@ -2,6 +2,7 @@ export type AccountUser = {
   id: string;
   firstName: string;
   lastName: string;
+  careerFocus: "industrial" | "academic";
   plan: "free" | "pro";
   onboardingComplete: boolean;
   createdAt: string;

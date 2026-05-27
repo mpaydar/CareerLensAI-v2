@@ -1,6 +1,7 @@
 "use client";
 
 import { AccountProvider, useAccount } from "@/components/account-provider";
+import { AcademicOpportunitiesDashboard } from "@/components/academic-opportunities-dashboard";
 import { InterviewPrepCoach } from "@/components/interview-prep-coach";
 import { LoginWelcome } from "@/components/login-welcome";
 import { OnboardingWelcome } from "@/components/onboarding-welcome";
@@ -397,153 +398,159 @@ function HomeApp() {
 
         <UsageBanner />
 
-        <ApplicationsInsight currentJobId={highlight.jobId || undefined} />
+        {user.careerFocus === "academic" ? (
+          <AcademicOpportunitiesDashboard />
+        ) : (
+          <>
+            <ApplicationsInsight currentJobId={highlight.jobId || undefined} />
 
-        <section className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-sm uppercase tracking-wide text-zinc-400">
-              Latest Highlight
-            </h2>
-            <button
-              type="button"
-              onClick={() => void clearHighlight()}
-              disabled={!highlight.text}
-              className="rounded-md border border-zinc-600 px-3 py-1.5 text-xs text-zinc-300 hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              Clear highlight
-            </button>
-          </div>
-          <pre className="max-h-[420px] min-h-[160px] overflow-auto whitespace-pre-wrap break-words rounded-lg bg-zinc-950 p-4 text-sm leading-relaxed text-zinc-100">
-            {highlight.text || "No text captured yet."}
-          </pre>
-          <p className="mt-3 text-xs text-zinc-600">
-            Select job description text on LinkedIn (extension) or on this page.
-            Same job appends with a separator; a new job replaces the box. The
-            extension popup shows local capture; this box shows what reached the
-            server — check the service worker console for{" "}
-            <span className="text-zinc-500">[ResumeSnap] saved to …</span>.
-          </p>
-          {!highlight.text ? (
-            <p className="mt-2 text-xs text-amber-600/90">
-              Not syncing? Open this dashboard tab once, set your Vercel URL in
-              extension Options, reload the extension, refresh LinkedIn, then
-              highlight again.
-            </p>
-          ) : null}
-          <div className="mt-4 text-xs text-zinc-500">
-            {highlight.updatedAt
-              ? `Updated: ${new Date(highlight.updatedAt).toLocaleTimeString()}`
-              : "Updated: --"}
-          </div>
-          {highlight.jobId ? (
-            <div className="mt-1 text-xs text-zinc-500">
-              Job ID: {highlight.jobId}
-            </div>
-          ) : null}
-          <div className="mt-1 text-xs text-zinc-500 break-all">
-            {highlight.sourceUrl
-              ? `Source: ${highlight.sourceUrl}`
-              : "Source: --"}
-          </div>
-        </section>
-
-        <section className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
-          <h2 className="mb-3 text-sm uppercase tracking-wide text-zinc-400">
-            Your resume
-          </h2>
-          <p className="mb-4 text-sm text-zinc-500">
-            PDF or Word (.doc, .docx), up to 10 MB. Replace anytime with an
-            updated version.
-          </p>
-          <input
-            ref={fileInputRef}
-            id="resume-file"
-            type="file"
-            accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            className="sr-only"
-            disabled={uploadBusy}
-            onChange={(e) => void sendResumeFile(e.target.files?.[0])}
-          />
-          <div
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                fileInputRef.current?.click();
-              }
-            }}
-            onClick={() => fileInputRef.current?.click()}
-            onDragEnter={(e) => {
-              e.preventDefault();
-              setDragActive(true);
-            }}
-            onDragOver={(e) => {
-              e.preventDefault();
-              setDragActive(true);
-            }}
-            onDragLeave={() => setDragActive(false)}
-            onDrop={(e) => {
-              e.preventDefault();
-              setDragActive(false);
-              void sendResumeFile(e.dataTransfer.files?.[0]);
-            }}
-            className={`flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed px-4 py-10 text-center transition-colors ${
-              dragActive
-                ? "border-indigo-400 bg-zinc-800/80"
-                : "border-zinc-600 bg-zinc-950/50 hover:border-zinc-500"
-            } ${uploadBusy ? "pointer-events-none opacity-60" : ""}`}
-          >
-            <span className="text-sm font-medium text-zinc-200">
-              Drop a file here or click to browse
-            </span>
-            <span className="mt-2 text-xs text-zinc-500">
-              {uploadBusy ? "Working…" : null}
-            </span>
-          </div>
-          {uploadError ? (
-            <p className="mt-3 text-xs text-red-400">{uploadError}</p>
-          ) : null}
-          {resumeMeta ? (
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-zinc-700 bg-zinc-950/60 px-4 py-3 text-sm">
-              <div className="min-w-0">
-                <p className="truncate font-medium text-zinc-200">
-                  {resumeMeta.originalFileName}
-                </p>
-                <p className="text-xs text-zinc-500">
-                  {formatFileSize(resumeMeta.sizeBytes)} ·{" "}
-                  {new Date(resumeMeta.uploadedAt).toLocaleString()}
-                </p>
+            <section className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <h2 className="text-sm uppercase tracking-wide text-zinc-400">
+                  Latest Highlight
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => void clearHighlight()}
+                  disabled={!highlight.text}
+                  className="rounded-md border border-zinc-600 px-3 py-1.5 text-xs text-zinc-300 hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Clear highlight
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  void removeResume();
-                }}
+              <pre className="max-h-[420px] min-h-[160px] overflow-auto whitespace-pre-wrap break-words rounded-lg bg-zinc-950 p-4 text-sm leading-relaxed text-zinc-100">
+                {highlight.text || "No text captured yet."}
+              </pre>
+              <p className="mt-3 text-xs text-zinc-600">
+                Select job description text on LinkedIn (extension) or on this
+                page. Same job appends with a separator; a new job replaces the
+                box. The extension popup shows local capture; this box shows what
+                reached the server — check the service worker console for{" "}
+                <span className="text-zinc-500">[ResumeSnap] saved to …</span>.
+              </p>
+              {!highlight.text ? (
+                <p className="mt-2 text-xs text-amber-600/90">
+                  Not syncing? Open this dashboard tab once, set your Vercel URL
+                  in extension Options, reload the extension, refresh LinkedIn,
+                  then highlight again.
+                </p>
+              ) : null}
+              <div className="mt-4 text-xs text-zinc-500">
+                {highlight.updatedAt
+                  ? `Updated: ${new Date(highlight.updatedAt).toLocaleTimeString()}`
+                  : "Updated: --"}
+              </div>
+              {highlight.jobId ? (
+                <div className="mt-1 text-xs text-zinc-500">
+                  Job ID: {highlight.jobId}
+                </div>
+              ) : null}
+              <div className="mt-1 text-xs text-zinc-500 break-all">
+                {highlight.sourceUrl
+                  ? `Source: ${highlight.sourceUrl}`
+                  : "Source: --"}
+              </div>
+            </section>
+
+            <section className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
+              <h2 className="mb-3 text-sm uppercase tracking-wide text-zinc-400">
+                Your resume
+              </h2>
+              <p className="mb-4 text-sm text-zinc-500">
+                PDF or Word (.doc, .docx), up to 10 MB. Replace anytime with an
+                updated version.
+              </p>
+              <input
+                ref={fileInputRef}
+                id="resume-file"
+                type="file"
+                accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                className="sr-only"
                 disabled={uploadBusy}
-                className="shrink-0 rounded-md border border-zinc-600 px-3 py-1.5 text-xs text-zinc-300 hover:bg-zinc-800 disabled:opacity-50"
+                onChange={(e) => void sendResumeFile(e.target.files?.[0])}
+              />
+              <div
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    fileInputRef.current?.click();
+                  }
+                }}
+                onClick={() => fileInputRef.current?.click()}
+                onDragEnter={(e) => {
+                  e.preventDefault();
+                  setDragActive(true);
+                }}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setDragActive(true);
+                }}
+                onDragLeave={() => setDragActive(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setDragActive(false);
+                  void sendResumeFile(e.dataTransfer.files?.[0]);
+                }}
+                className={`flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed px-4 py-10 text-center transition-colors ${
+                  dragActive
+                    ? "border-indigo-400 bg-zinc-800/80"
+                    : "border-zinc-600 bg-zinc-950/50 hover:border-zinc-500"
+                } ${uploadBusy ? "pointer-events-none opacity-60" : ""}`}
               >
-                Remove
-              </button>
-            </div>
-          ) : null}
-        </section>
+                <span className="text-sm font-medium text-zinc-200">
+                  Drop a file here or click to browse
+                </span>
+                <span className="mt-2 text-xs text-zinc-500">
+                  {uploadBusy ? "Working…" : null}
+                </span>
+              </div>
+              {uploadError ? (
+                <p className="mt-3 text-xs text-red-400">{uploadError}</p>
+              ) : null}
+              {resumeMeta ? (
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-zinc-700 bg-zinc-950/60 px-4 py-3 text-sm">
+                  <div className="min-w-0">
+                    <p className="truncate font-medium text-zinc-200">
+                      {resumeMeta.originalFileName}
+                    </p>
+                    <p className="text-xs text-zinc-500">
+                      {formatFileSize(resumeMeta.sizeBytes)} ·{" "}
+                      {new Date(resumeMeta.uploadedAt).toLocaleString()}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void removeResume();
+                    }}
+                    disabled={uploadBusy}
+                    className="shrink-0 rounded-md border border-zinc-600 px-3 py-1.5 text-xs text-zinc-300 hover:bg-zinc-800 disabled:opacity-50"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ) : null}
+            </section>
 
-        <SkillGapDashboard
-          analysis={highlight.text.trim() ? gapAnalysis : null}
-          analyzing={gapAnalyzing}
-          error={gapError}
-          ready={gapReady}
-          highlightText={highlight.text}
-          onAnalyze={(jd) => void runGapAnalysis(jd)}
-        />
+            <SkillGapDashboard
+              analysis={highlight.text.trim() ? gapAnalysis : null}
+              analyzing={gapAnalyzing}
+              error={gapError}
+              ready={gapReady}
+              highlightText={highlight.text}
+              onAnalyze={(jd) => void runGapAnalysis(jd)}
+            />
 
-        <InterviewPrepCoach
-          gapSkills={
-            highlight.text.trim() ? (gapAnalysis?.missing ?? []) : []
-          }
-        />
+            <InterviewPrepCoach
+              gapSkills={
+                highlight.text.trim() ? (gapAnalysis?.missing ?? []) : []
+              }
+            />
+          </>
+        )}
 
         <div className="rounded-lg border border-zinc-700 bg-zinc-900 px-4 py-3 text-sm text-indigo-300">
           {statusLabel}

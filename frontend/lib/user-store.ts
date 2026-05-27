@@ -2,6 +2,7 @@ import { getRedis } from "@/lib/redis";
 import type { OAuthProvider } from "@/lib/oauth";
 
 export type UserPlan = "free" | "pro";
+export type CareerFocus = "industrial" | "academic";
 
 export type User = {
   id: string;
@@ -15,6 +16,7 @@ export type User = {
   authProviderId?: string;
   lastLoginIp?: string;
   lastLoginAt?: string;
+  careerFocus?: CareerFocus;
 };
 
 const USER_KEY_PREFIX = "resumesnap:user:";
@@ -93,6 +95,7 @@ export async function createOAuthUser(input: {
     authProviderId: input.providerId,
     lastLoginIp: input.lastLoginIp,
     lastLoginAt: new Date().toISOString(),
+    careerFocus: "industrial",
   };
   return saveUser(user);
 }
@@ -124,6 +127,7 @@ export async function createUser(input: {
     plan: "free",
     onboardingComplete: false,
     createdAt: new Date().toISOString(),
+    careerFocus: "industrial",
   };
   return saveUser(user);
 }
@@ -138,7 +142,7 @@ export async function completeOnboarding(userId: string): Promise<User | null> {
 
 export async function updateUserProfile(
   userId: string,
-  input: { firstName?: string; lastName?: string },
+  input: { firstName?: string; lastName?: string; careerFocus?: CareerFocus },
 ): Promise<User | null> {
   const user = await getUserById(userId);
   if (!user) {
@@ -148,5 +152,6 @@ export async function updateUserProfile(
     ...user,
     firstName: input.firstName?.trim() ?? user.firstName,
     lastName: input.lastName?.trim() ?? user.lastName,
+    careerFocus: input.careerFocus ?? user.careerFocus ?? "industrial",
   });
 }
