@@ -62,6 +62,7 @@ const FACULTY_SAMPLE: Faculty[] = [
 ];
 
 export function AcademicOpportunitiesDashboard() {
+  const [searchInput, setSearchInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
 
   const filteredFaculty = useMemo(() => {
@@ -90,13 +91,28 @@ export function AcademicOpportunitiesDashboard() {
       <div className="mt-4">
         <label className="block">
           <span className="text-xs font-medium text-zinc-400">Search</span>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(event) => setSearchQuery(event.target.value)}
-            placeholder="name of school and department"
-            className="mt-1.5 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
-          />
+          <div className="mt-1.5 flex gap-2">
+            <input
+              type="text"
+              value={searchInput}
+              onChange={(event) => setSearchInput(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  setSearchQuery(searchInput);
+                }
+              }}
+              placeholder="name of school and department"
+              className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
+            />
+            <button
+              type="button"
+              onClick={() => setSearchQuery(searchInput)}
+              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-500"
+            >
+              Search
+            </button>
+          </div>
         </label>
       </div>
 
