@@ -62,23 +62,21 @@ const FACULTY_SAMPLE: Faculty[] = [
 ];
 
 export function AcademicOpportunitiesDashboard() {
-  const [schoolQuery, setSchoolQuery] = useState("");
-  const [selectedDepartment, setSelectedDepartment] = useState("all");
-
-  const departments = useMemo(() => {
-    return Array.from(new Set(FACULTY_SAMPLE.map((item) => item.department)));
-  }, []);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const filteredFaculty = useMemo(() => {
+    const normalizedQuery = searchQuery.trim().toLowerCase();
     return FACULTY_SAMPLE.filter((item) => {
-      const schoolMatch = item.school
+      if (!normalizedQuery) {
+        return true;
+      }
+      const schoolMatch = item.school.toLowerCase().includes(normalizedQuery);
+      const departmentMatch = item.department
         .toLowerCase()
-        .includes(schoolQuery.trim().toLowerCase());
-      const departmentMatch =
-        selectedDepartment === "all" || item.department === selectedDepartment;
-      return schoolMatch && departmentMatch;
+        .includes(normalizedQuery);
+      return schoolMatch || departmentMatch;
     }).sort((a, b) => b.matchingPercentage - a.matchingPercentage);
-  }, [schoolQuery, selectedDepartment]);
+  }, [searchQuery]);
 
   return (
     <section className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
@@ -86,42 +84,26 @@ export function AcademicOpportunitiesDashboard() {
         Academic Opportunities
       </h2>
       <p className="mt-2 text-sm text-zinc-500">
-        Search by school and filter by department to discover faculty matches.
+        Search by school or department to discover faculty matches.
       </p>
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+      <div className="mt-4">
         <label className="block">
-          <span className="text-xs font-medium text-zinc-400">Search school</span>
+          <span className="text-xs font-medium text-zinc-400">Search</span>
           <input
             type="text"
-            value={schoolQuery}
-            onChange={(event) => setSchoolQuery(event.target.value)}
-            placeholder="e.g. Northbridge University"
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder="name of school and department"
             className="mt-1.5 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
           />
-        </label>
-
-        <label className="block">
-          <span className="text-xs font-medium text-zinc-400">Department</span>
-          <select
-            value={selectedDepartment}
-            onChange={(event) => setSelectedDepartment(event.target.value)}
-            className="mt-1.5 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
-          >
-            <option value="all">All departments</option>
-            {departments.map((department) => (
-              <option key={department} value={department}>
-                {department}
-              </option>
-            ))}
-          </select>
         </label>
       </div>
 
       <div className="mt-5 space-y-3">
         {filteredFaculty.length === 0 ? (
           <div className="rounded-lg border border-zinc-700 bg-zinc-950/50 px-4 py-3 text-sm text-zinc-400">
-            No faculty matches found for this school and department.
+            No faculty matches found for this search.
           </div>
         ) : (
           filteredFaculty.map((faculty) => (
