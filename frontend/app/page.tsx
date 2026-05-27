@@ -38,6 +38,8 @@ export default function Home() {
 function HomeApp() {
   const { user, loading, resume: resumeMeta, refreshAccount } = useAccount();
   const [authError, setAuthError] = useState<string | null>(null);
+  const [focusBusy, setFocusBusy] = useState(false);
+  const [focusError, setFocusError] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -361,6 +363,31 @@ function HomeApp() {
     return "Live updates active";
   }, [highlight.text, isOnline, highlightStorage]);
 
+  const submitCareerFocus = useCallback(
+    async (careerFocus: "industrial" | "academic") => {
+      setFocusError(null);
+      setFocusBusy(true);
+      try {
+        const response = await fetch("/api/account", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ careerFocus }),
+        });
+        const data = (await response.json()) as { error?: string };
+        if (!response.ok) {
+          setFocusError(data.error ?? "Could not save your focus.");
+          return;
+        }
+        await refreshAccount();
+      } catch {
+        setFocusError("Could not save your focus.");
+      } finally {
+        setFocusBusy(false);
+      }
+    },
+    [refreshAccount],
+  );
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-zinc-950 text-zinc-400">
@@ -375,6 +402,50 @@ function HomeApp() {
 
   if (!user.onboardingComplete) {
     return <OnboardingWelcome />;
+  }
+
+  if (!user.careerFocus) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/95 p-4">
+        <div className="relative w-full max-w-lg rounded-2xl border border-zinc-800 bg-zinc-900 p-8 shadow-2xl">
+          <div className="absolute right-6 top-6">
+            <SignOutButton />
+          </div>
+          <p className="text-xs font-medium uppercase tracking-widest text-indigo-400">
+            One quick question
+          </p>
+          <h1 className="mt-2 text-2xl font-semibold text-zinc-50">
+            Which role focus are you targeting?
+          </h1>
+          <p className="mt-2 text-sm leading-relaxed text-zinc-400">
+            Your answer selects the dashboard environment you see after sign in.
+          </p>
+          <div className="mt-6 grid gap-3 sm:grid-cols-2">
+            <button
+              type="button"
+              onClick={() => void submitCareerFocus("industrial")}
+              disabled={focusBusy}
+              className="rounded-lg border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm font-medium text-zinc-100 hover:border-indigo-500 hover:bg-zinc-800 disabled:opacity-60"
+            >
+              Industrial focus
+            </button>
+            <button
+              type="button"
+              onClick={() => void submitCareerFocus("academic")}
+              disabled={focusBusy}
+              className="rounded-lg border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm font-medium text-zinc-100 hover:border-indigo-500 hover:bg-zinc-800 disabled:opacity-60"
+            >
+              Academic focus
+            </button>
+          </div>
+          {focusError ? (
+            <p className="mt-4 rounded-lg border border-red-900/50 bg-red-950/40 px-3 py-2 text-sm text-red-300">
+              {focusError}
+            </p>
+          ) : null}
+        </div>
+      </div>
+    );
   }
 
   return (

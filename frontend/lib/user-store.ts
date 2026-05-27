@@ -95,7 +95,6 @@ export async function createOAuthUser(input: {
     authProviderId: input.providerId,
     lastLoginIp: input.lastLoginIp,
     lastLoginAt: new Date().toISOString(),
-    careerFocus: "industrial",
   };
   return saveUser(user);
 }
@@ -127,7 +126,6 @@ export async function createUser(input: {
     plan: "free",
     onboardingComplete: false,
     createdAt: new Date().toISOString(),
-    careerFocus: "industrial",
   };
   return saveUser(user);
 }
@@ -152,6 +150,6 @@ export async function updateUserProfile(
     ...user,
     firstName: input.firstName?.trim() ?? user.firstName,
     lastName: input.lastName?.trim() ?? user.lastName,
-    careerFocus: input.careerFocus ?? user.careerFocus ?? "industrial",
+    careerFocus: input.careerFocus ?? user.careerFocus,
   });
 }
