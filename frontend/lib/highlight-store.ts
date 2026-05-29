@@ -193,6 +193,23 @@ export async function clearHighlightState(
   return writeState(scopeId, { ...defaultState });
 }
 
+/** Replace highlight text entirely (manual paste/edit from dashboard). */
+export async function setHighlightText(
+  text: string,
+  sourceUrl: string,
+  scopeId: string = GLOBAL_HIGHLIGHT_SCOPE,
+): Promise<HighlightState> {
+  const current = await getHighlightState(scopeId);
+  const incomingJobId = extractJobId(sourceUrl);
+  const nextState: HighlightState = {
+    text: text.trim(),
+    sourceUrl: sourceUrl || current.sourceUrl,
+    jobId: incomingJobId || current.jobId,
+    updatedAt: new Date().toISOString(),
+  };
+  return writeState(scopeId, nextState);
+}
+
 /** Replace scope state (used to mirror extension global highlight for logged-in users). */
 export async function replaceHighlightState(
   scopeId: string,

@@ -4,6 +4,7 @@ import {
   clearHighlightState,
   GLOBAL_HIGHLIGHT_SCOPE,
   highlightStorageBackend,
+  setHighlightText,
 } from "@/lib/highlight-store";
 import { getHighlightForSession, getHighlightScopeId } from "@/lib/highlight-scope";
 import { getAuthenticatedUser } from "@/lib/auth";
@@ -11,7 +12,7 @@ import { clearGapAnalysis } from "@/lib/gap-store";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET,POST,DELETE,OPTIONS",
+  "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, X-ResumeSnap-Source",
 };
 
@@ -82,6 +83,44 @@ export async function POST(request: Request) {
     return NextResponse.json(state, {
       headers: { ...CORS_HEADERS, ...NO_CACHE_HEADERS },
     });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "highlight save failed";
+    const status = /redis|upstash/i.test(message) ? 503 : 400;
+    return NextResponse.json(
+      { error: message },
+      { status, headers: CORS_HEADERS },
+    );
+  }
+}
+
+export async function PUT(request: Request) {
+  try {
+    if (isExtensionRequest(request)) {
+      return NextResponse.json(
+        { error: "Use POST from the extension." },
+        { status: 405, headers: CORS_HEADERS },
+      );
+    }
+
+    const body = (await request.json()) as {
+      text?: string;
+      sourceUrl?: string;
+    };
+    const text = body.text ?? "";
+    const sourceUrl = (body.sourceUrl ?? "").trim();
+    const scopeId = await getHighlightScopeId();
+    const state = await setHighlightText(text, sourceUrl, scopeId);
+
+    return NextResponse.json(
+      {
+        ...state,
+        storage: highlightStorageBackend(),
+      },
+      {
+        headers: { ...CORS_HEADERS, ...NO_CACHE_HEADERS },
+      },
+    );
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "highlight save failed";

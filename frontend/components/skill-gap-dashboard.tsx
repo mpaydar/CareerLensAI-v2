@@ -356,7 +356,7 @@ function JobDescriptionEditor({
         onChange={(event) => onChange(event.target.value)}
         rows={8}
         placeholder="Paste or edit the job description (requirements, tech stack). Extension highlights sync here automatically."
-        className="w-full resize-y rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-indigo-500 focus:outline-none"
+        className="w-full select-text resize-y rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-indigo-500 focus:outline-none"
       />
       <button
         type="button"

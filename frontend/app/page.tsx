@@ -27,6 +27,15 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function isEditableElement(element: Element | null): boolean {
+  if (!element) {
+    return false;
+  }
+  return Boolean(
+    element.closest("input, textarea, select, [contenteditable='true']"),
+  );
+}
+
 export default function Home() {
   return (
     <AccountProvider>
@@ -74,6 +83,9 @@ function HomeApp() {
   const lastPublishedOnPage = useRef("");
   const lastAnalyzedKey = useRef("");
   const analyzeDebounceRef = useRef<number | undefined>(undefined);
+  const [highlightDraft, setHighlightDraft] = useState("");
+  const highlightEditingRef = useRef(false);
+  const highlightSaveTimerRef = useRef<number | undefined>(undefined);
 
   useEffect(() => {
     let isMounted = true;
@@ -118,6 +130,9 @@ function HomeApp() {
 
     /** Works in Cursor/VS Code preview (no extension). Cross-tab capture still needs Chrome + extension. */
     const publishSelectionFromThisPage = async () => {
+      if (isEditableElement(document.activeElement)) {
+        return;
+      }
       const text = window.getSelection()?.toString().trim() ?? "";
       if (!text) {
         lastPublishedOnPage.current = "";
@@ -174,11 +189,21 @@ function HomeApp() {
     };
 
     const onSelectionChange = () => {
+      if (isEditableElement(document.activeElement)) {
+        return;
+      }
+      schedulePublishFromPage();
+    };
+
+    const onMouseUp = () => {
+      if (isEditableElement(document.activeElement)) {
+        return;
+      }
       schedulePublishFromPage();
     };
 
     document.addEventListener("selectionchange", onSelectionChange);
-    document.addEventListener("mouseup", schedulePublishFromPage);
+    document.addEventListener("mouseup", onMouseUp);
     document.addEventListener("keyup", onKeyUp);
 
     return () => {
@@ -188,10 +213,58 @@ function HomeApp() {
       window.removeEventListener("focus", pullLatestHighlight);
       document.removeEventListener("visibilitychange", onVisibilityChange);
       document.removeEventListener("selectionchange", onSelectionChange);
-      document.removeEventListener("mouseup", schedulePublishFromPage);
+      document.removeEventListener("mouseup", onMouseUp);
+      window.clearTimeout(highlightSaveTimerRef.current);
       document.removeEventListener("keyup", onKeyUp);
     };
   }, []);
+
+  useEffect(() => {
+    if (!highlightEditingRef.current) {
+      setHighlightDraft(highlight.text);
+    }
+  }, [highlight.text, highlight.updatedAt]);
+
+  const persistHighlightDraft = useCallback(
+    async (text: string) => {
+      try {
+        const response = await fetch("/api/highlight", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({
+            text,
+            sourceUrl:
+              highlight.sourceUrl ||
+              (typeof window !== "undefined" ? window.location.href : ""),
+          }),
+        });
+        if (!response.ok) {
+          return;
+        }
+        const data = (await response.json()) as HighlightResponse;
+        setHighlight(data);
+        setIsOnline(true);
+        if (!text.trim()) {
+          setGapAnalysis(null);
+          lastAnalyzedKey.current = "";
+        }
+      } catch {
+        setIsOnline(false);
+      }
+    },
+    [highlight.sourceUrl],
+  );
+
+  const scheduleHighlightSave = useCallback(
+    (text: string) => {
+      window.clearTimeout(highlightSaveTimerRef.current);
+      highlightSaveTimerRef.current = window.setTimeout(() => {
+        void persistHighlightDraft(text);
+      }, 600);
+    },
+    [persistHighlightDraft],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -224,7 +297,7 @@ function HomeApp() {
   const runGapAnalysis = useCallback(async (jobDescriptionOverride?: string) => {
     setGapError(null);
     setGapAnalyzing(true);
-    const jobDescription = (jobDescriptionOverride ?? highlight.text).trim();
+    const jobDescription = (jobDescriptionOverride ?? highlightDraft).trim();
     try {
       const response = await fetch("/api/gap", {
         method: "POST",
@@ -241,7 +314,7 @@ function HomeApp() {
       }
       if (data.analysis) {
         setGapAnalysis(data.analysis);
-        lastAnalyzedKey.current = `${highlight.jobId}:${highlight.updatedAt}:${highlight.text.length}`;
+        lastAnalyzedKey.current = `${highlight.jobId}:${highlight.updatedAt}:${highlightDraft.length}`;
       }
     } catch {
       setGapError(
@@ -250,11 +323,11 @@ function HomeApp() {
     } finally {
       setGapAnalyzing(false);
     }
-  }, [highlight.text, highlight.jobId, highlight.updatedAt]);
+  }, [highlightDraft, highlight.jobId, highlight.updatedAt]);
 
   const gapReady = useMemo(
-    () => Boolean(resumeMeta) && highlight.text.trim().length >= 20,
-    [resumeMeta, highlight.text],
+    () => Boolean(resumeMeta) && highlightDraft.trim().length >= 20,
+    [resumeMeta, highlightDraft],
   );
 
   useEffect(() => {
@@ -262,7 +335,7 @@ function HomeApp() {
       return;
     }
 
-    const analysisKey = `${highlight.jobId}:${highlight.updatedAt}:${highlight.text.length}`;
+    const analysisKey = `${highlight.jobId}:${highlight.updatedAt}:${highlightDraft.length}`;
     if (analysisKey === lastAnalyzedKey.current) {
       return;
     }
@@ -275,7 +348,7 @@ function HomeApp() {
     return () => {
       window.clearTimeout(analyzeDebounceRef.current);
     };
-  }, [gapReady, highlight.text, highlight.jobId, highlight.updatedAt, runGapAnalysis]);
+  }, [gapReady, highlightDraft, highlight.jobId, highlight.updatedAt, runGapAnalysis]);
 
   const sendResumeFile = async (file: File | undefined) => {
     if (!file) {
@@ -318,6 +391,7 @@ function HomeApp() {
       }
       const data = (await response.json()) as HighlightResponse;
       setHighlight(data);
+      setHighlightDraft("");
       setGapAnalysis(null);
       setGapError(null);
       lastPublishedOnPage.current = "";
@@ -351,7 +425,7 @@ function HomeApp() {
     if (!isOnline) {
       return "Cannot reach highlight API — check extension URL and Redis on Vercel";
     }
-    if (!highlight.text) {
+    if (!highlightDraft.trim()) {
       if (highlightStorage === "file" && typeof window !== "undefined") {
         const onVercel = /vercel\.app$/i.test(window.location.hostname);
         if (onVercel) {
@@ -361,7 +435,7 @@ function HomeApp() {
       return "Waiting for highlighted text… (open this tab once + set extension API URL)";
     }
     return "Live updates active";
-  }, [highlight.text, isOnline, highlightStorage]);
+  }, [highlightDraft, isOnline, highlightStorage]);
 
   const submitCareerFocus = useCallback(
     async (careerFocus: "industrial" | "academic") => {
@@ -531,23 +605,36 @@ function HomeApp() {
                 <button
                   type="button"
                   onClick={() => void clearHighlight()}
-                  disabled={!highlight.text}
+                  disabled={!highlightDraft.trim()}
                   className="rounded-md border border-zinc-600 px-3 py-1.5 text-xs text-zinc-300 hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   Clear highlight
                 </button>
               </div>
-              <pre className="max-h-[420px] min-h-[160px] overflow-auto whitespace-pre-wrap break-words rounded-lg bg-zinc-950 p-4 text-sm leading-relaxed text-zinc-100">
-                {highlight.text || "No text captured yet."}
-              </pre>
+              <textarea
+                value={highlightDraft}
+                onChange={(event) => {
+                  const next = event.target.value;
+                  setHighlightDraft(next);
+                  scheduleHighlightSave(next);
+                }}
+                onFocus={() => {
+                  highlightEditingRef.current = true;
+                }}
+                onBlur={() => {
+                  highlightEditingRef.current = false;
+                  void persistHighlightDraft(highlightDraft);
+                }}
+                rows={10}
+                placeholder="Paste or type a job description here, or highlight text on LinkedIn with the extension."
+                className="max-h-[420px] min-h-[160px] w-full resize-y select-text rounded-lg border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm leading-relaxed text-zinc-100 placeholder:text-zinc-600 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+              />
               <p className="mt-3 text-xs text-zinc-600">
-                Select job description text on LinkedIn (extension) or on this
-                page. Same job appends with a separator; a new job replaces the
-                box. The extension popup shows local capture; this box shows what
-                reached the server — check the service worker console for{" "}
-                <span className="text-zinc-500">[ResumeSnap] saved to …</span>.
+                You can copy and paste manually in this box. Extension highlights
+                also sync here automatically. Same job appends with a separator;
+                a new job replaces the box.
               </p>
-              {!highlight.text ? (
+              {!highlightDraft.trim() ? (
                 <p className="mt-2 text-xs text-amber-600/90">
                   Not syncing? Open this dashboard tab once, set your Vercel URL
                   in extension Options, reload the extension, refresh LinkedIn,
@@ -655,17 +742,17 @@ function HomeApp() {
             </section>
 
             <SkillGapDashboard
-              analysis={highlight.text.trim() ? gapAnalysis : null}
+              analysis={highlightDraft.trim() ? gapAnalysis : null}
               analyzing={gapAnalyzing}
               error={gapError}
               ready={gapReady}
-              highlightText={highlight.text}
+              highlightText={highlightDraft}
               onAnalyze={(jd) => void runGapAnalysis(jd)}
             />
 
             <InterviewPrepCoach
               gapSkills={
-                highlight.text.trim() ? (gapAnalysis?.missing ?? []) : []
+                highlightDraft.trim() ? (gapAnalysis?.missing ?? []) : []
               }
             />
           </>

@@ -85,7 +85,8 @@ export function AcademicOpportunitiesDashboard() {
         Academic Opportunities
       </h2>
       <p className="mt-2 text-sm text-zinc-500">
-        Search by school or department to discover faculty matches.
+        Type or paste a school and department, then click Search to discover
+        faculty matches.
       </p>
 
       <div className="mt-4">
@@ -103,7 +104,7 @@ export function AcademicOpportunitiesDashboard() {
                 }
               }}
               placeholder="name of school and department"
-              className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
+              className="w-full select-text rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
             />
             <button
               type="button"
@@ -125,7 +126,7 @@ export function AcademicOpportunitiesDashboard() {
           filteredFaculty.map((faculty) => (
             <article
               key={`${faculty.email}-${faculty.department}`}
-              className="rounded-lg border border-zinc-700 bg-zinc-950/70 p-4"
+              className="select-text rounded-lg border border-zinc-700 bg-zinc-950/70 p-4"
             >
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div>
@@ -163,6 +164,13 @@ export function AcademicOpportunitiesDashboard() {
                 >
                   {faculty.email}
                 </a>
+                <button
+                  type="button"
+                  onClick={() => void navigator.clipboard.writeText(faculty.email)}
+                  className="text-zinc-400 underline-offset-2 hover:text-zinc-200 hover:underline"
+                >
+                  Copy email
+                </button>
               </div>
             </article>
           ))
